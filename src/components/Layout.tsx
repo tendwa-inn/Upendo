@@ -61,59 +61,75 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen">
-      {/* Main Content */}
-      <main className="flex-1 pb-20">
-        {children}
-      </main>
+    <div className="relative min-h-screen">
+      {/* Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-black" />
+      <div
+        className="absolute inset-0"
+        style={{
+          backgroundImage: 'url(/Logo-White.png)',
+          backgroundSize: 'contain',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat',
+          opacity: 0.1,
+        }}
+      />
+      
+      {/* Content */}
+      <div className="relative z-10 flex flex-col min-h-screen">
+        {/* Main Content */}
+        <main className="flex-1">
+          {children}
+        </main>
 
-      {/* Bottom Navigation */}
-      <nav className={cn(
-        "fixed bottom-0 left-0 right-0",
-        user?.subscription === 'vip' ? "bg-transparent" : "backdrop-blur-lg border-t",
-        user?.subscription !== 'vip' && (theme === 'dark' 
-          ? 'bg-gray-900/90 border-gray-700' 
-          : 'bg-white/90 border-white/20')
-      )}>
-        <div className="flex justify-around items-center h-20 px-4">
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-            
-            return (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={cn(
-                  'flex flex-col items-center justify-center w-20 h-16 rounded-2xl transition-all duration-300',
-                  'hover:bg-white/20 active:scale-95',
-                  isActive
-                    ? 'bg-white/30 shadow-lg scale-105'
-                    : user?.subscription === 'vip'
-                    ? 'bg-black'
-                    : 'bg-transparent'
-                )}
-              >
-                <Icon
+        {/* Bottom Navigation */}
+        <nav className={cn(
+          "fixed bottom-0 left-0 right-0 pb-safe-area-bottom", // Added padding for safe area
+          user?.subscription === 'vip' ? "bg-transparent" : "backdrop-blur-lg border-t",
+          user?.subscription !== 'vip' && (theme === 'dark' 
+            ? 'bg-gray-900/90 border-gray-700' 
+            : 'bg-white/90 border-white/20')
+        )}>
+          <div className="flex justify-around items-center h-20 px-4">
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              const isActive = location.pathname === item.path;
+              
+              return (
+                <Link
+                  key={item.path}
+                  to={item.path}
                   className={cn(
-                    'w-6 h-6 mb-1 transition-all duration-300',
-                    isActive ? item.color : user?.subscription === 'vip' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-600',
-                    isActive && 'drop-shadow-lg'
-                  )}
-                />
-                <span
-                  className={cn(
-                    'text-xs font-bold transition-all duration-300',
-                    isActive ? item.color : user?.subscription === 'vip' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+                    'flex flex-col items-center justify-center w-20 h-16 rounded-2xl transition-all duration-300',
+                    'hover:bg-white/20 active:scale-95',
+                    isActive
+                      ? 'bg-white/30 shadow-lg scale-105'
+                      : user?.subscription === 'vip'
+                      ? 'bg-black'
+                      : 'bg-transparent'
                   )}
                 >
-                  {item.label}
-                </span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+                  <Icon
+                    className={cn(
+                      'w-6 h-6 mb-1 transition-all duration-300',
+                      isActive ? item.color : user?.subscription === 'vip' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-600',
+                      isActive && 'drop-shadow-lg'
+                    )}
+                  />
+                  <span
+                    className={cn(
+                      'text-xs font-bold transition-all duration-300',
+                      isActive ? item.color : user?.subscription === 'vip' ? 'text-orange-500' : theme === 'dark' ? 'text-gray-500' : 'text-gray-600'
+                    )}
+                  >
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
+      </div>
     </div>
   );
 };

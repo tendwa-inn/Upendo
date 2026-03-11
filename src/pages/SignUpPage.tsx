@@ -12,7 +12,16 @@ import LocationStep from '../components/auth/LocationStep';
 import WelcomeStep from '../components/auth/WelcomeStep';
 
 const SignUpPage: React.FC = () => {
-  const { step, nextStep, updateData } = useSignUpStore();
+  const { step, nextStep, updateData, formData } = useSignUpStore();
+
+  const validateAge = () => {
+    const age = new Date().getFullYear() - new Date(formData.dateOfBirth).getFullYear();
+    if (age < 18 || age > 60) {
+      alert('You must be between 18 and 60 to sign up.');
+      return false;
+    }
+    return true;
+  };
 
   const renderStep = () => {
     switch (step) {
@@ -21,7 +30,7 @@ const SignUpPage: React.FC = () => {
       case 2:
         return <NameStep />;
       case 3:
-        return <DobStep />;
+          return <DobStep />;
       case 4:
         return <GenderStep />;
       case 5:

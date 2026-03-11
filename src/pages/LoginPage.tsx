@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
-import { Heart, Mail, Lock } from 'lucide-react';
+import { useAdminStore } from '../stores/adminStore';
+import { Heart, Mail, Lock, Shield } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuthStore();
+  const [isAdminLogin, setIsAdminLogin] = useState(false);
+  const { login: userLogin } = useAuthStore();
+  const { login: adminLogin } = useAdminStore();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,9 +25,25 @@ const LoginPage: React.FC = () => {
 
     setIsLoading(true);
     try {
-      await login(email, password);
-      toast.success('Welcome to Upendo!');
+      if (isAdminLogin) {
+        if (!adminLogin) {
+          toast.error('Admin service is currently unavailable. Please try again later.');
+          setIsLoading(false);
+          return;
+        }
+        const success = await adminLogin(email, password);
+        if (success) {
+          toast.success('Welcome Admin!');
+          navigate('/admin/dashboard');
+        } else {
+          toast.error('Invalid admin credentials');
+        }
+      } else {
+        await userLogin(email, password);
+        toast.success('Welcome to Upendo!');
+      }
     } catch (error) {
+      console.error('Login error:', error);
       toast.error('Login failed. Please try again.');
     } finally {
       setIsLoading(false);
@@ -45,7 +65,11 @@ const LoginPage: React.FC = () => {
             transition={{ delay: 0.2, type: 'spring', stiffness: 200 }}
             className="inline-flex items-center justify-center w-20 h-20 bg-white/20 backdrop-blur-lg rounded-full mb-4"
           >
-            <Heart className="w-10 h-10 text-white" fill="currentColor" />
+            {isAdminLogin ? (
+              <Shield className="w-10 h-10 text-white" />
+            ) : (
+              <Heart className="w-10 h-10 text-white" fill="currentColor" />
+            )}
           </motion.div>
           
           <motion.h1
@@ -54,7 +78,7 @@ const LoginPage: React.FC = () => {
             transition={{ delay: 0.4 }}
             className="text-4xl font-bold text-white mb-2"
           >
-            Upendo
+            {isAdminLogin ? 'Admin Portal' : 'Upendo'}
           </motion.h1>
           
           <motion.p
@@ -63,7 +87,7 @@ const LoginPage: React.FC = () => {
             transition={{ delay: 0.6 }}
             className="text-white/80 text-lg"
           >
-            Find your perfect match
+            {isAdminLogin ? 'Sign in to access administrative controls' : 'Find your perfect match'}
           </motion.p>
         </div>
 
@@ -126,11 +150,19 @@ const LoginPage: React.FC = () => {
           className="text-center mt-6"
         >
           <p className="text-white/70 text-sm">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-white font-medium hover:underline">
-              Sign up
-            </Link>
+            {isAdminLogin ? 'Not an admin?' : "Don't have an account?"}{' '}
+            <button onClick={() => setIsAdminLogin(!isAdminLogin)} className="text-white font-medium hover:underline">
+              {isAdminLogin ? 'User Login' : 'Admin Login'}
+            </button>
           </p>
+          {!isAdminLogin && (
+            <p className="text-white/70 text-sm mt-2">
+              Don't have an account?{' '}
+              <Link to="/signup" className="text-white font-medium hover:underline">
+                Sign up
+              </Link>
+            </p>
+          )}
         </motion.div>
       </motion.div>
     </div>

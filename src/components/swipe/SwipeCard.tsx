@@ -1,11 +1,11 @@
-import React, { useRef, useState } from 'react';
+import React, { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion, useMotionValue, useTransform, PanInfo } from 'framer-motion';
 import { User } from '../../types';
-import { Heart, X, Info } from 'lucide-react';
+import { Heart, X } from 'lucide-react';
 import { useAuthStore } from '../../stores/authStore';
 import { useThemeStore } from '../../stores/themeStore';
 import { cn } from '../../lib/utils';
-import ProfileDetailModal from '../modals/ProfileDetailModal';
 
 interface SwipeCardProps {
   user: User;
@@ -25,7 +25,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
   const cardRef = useRef<HTMLDivElement>(null);
   const { user: currentUser } = useAuthStore();
   const { theme } = useThemeStore();
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const navigate = useNavigate();
+
   const x = useMotionValue(0);
   const rotate = useTransform(x, [-200, 200], [-30, 30]);
   const opacity = useTransform(x, [-200, -100, 0, 100, 200], [0, 1, 1, 1, 0]);
@@ -38,14 +39,14 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     
     if (Math.abs(info.offset.x) > threshold) {
       if (info.offset.x > 0) {
-        // Swipe right (like)
         onSwipeRight(user.id);
       } else {
-        // Swipe left (pass)
         onSwipeLeft(user.id);
       }
     }
   };
+
+  const mutualInterests = (currentUser?.interests || []).filter(interest => (user.interests || []).includes(interest));
 
   if (!isActive) {
     return null;
@@ -79,34 +80,42 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
           <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         </div>
 
-        <div className="absolute top-4 left-4 z-10 bg-black/30 backdrop-blur-md text-white px-3 py-1 rounded-full text-sm font-semibold">
-          {user.hereFor[0]?.toUpperCase()}
-        </div>
-
-        {/* Like/Pass Indicators */}
-        <motion.div
-          className="absolute top-8 left-8 bg-red-500 text-white px-6 py-3 rounded-2xl font-bold text-lg transform rotate-12"
-          style={{ opacity: passOpacity }}
-        >
-          <X className="w-8 h-8 inline mr-2" />
-          PASS
-        </motion.div>
-        
-        <div className="absolute top-4 right-4 z-10">
-          <button 
-            onClick={() => setIsModalOpen(true)}
-            className="w-10 h-10 bg-black/30 backdrop-blur-lg rounded-full flex items-center justify-center text-white hover:bg-black/50 transition-colors">
-            <Info className="w-6 h-6" />
+        {/* Top Action Buttons */}
+        <div className="absolute top-4 left-4 right-4 flex justify-between z-10">
+          <button
+            onClick={() => onSwipeLeft(user.id)}
+            disabled={!canSwipe}
+            className={cn(
+              'w-12 h-12 backdrop-blur-lg rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50',
+              theme === 'dark' 
+                ? 'bg-gray-700/50 text-red-400 hover:bg-gray-600/50'
+                : 'bg-white/20 text-red-500 hover:bg-white/30'
+            )}
+          >
+            <X className="w-6 h-6" />
+          </button>
+          
+          <button
+            onClick={() => onSwipeRight(user.id)}
+            disabled={!canSwipe}
+            className={cn(
+              'w-12 h-12 backdrop-blur-lg rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50',
+              theme === 'dark' 
+                ? 'bg-gray-700/50 text-green-400 hover:bg-gray-600/50'
+                : 'bg-white/20 text-green-500 hover:bg-white/30'
+            )}
+          >
+            <Heart className="w-6 h-6" fill="currentColor" />
           </button>
         </div>
 
         {/* User Info */}
         <div className={cn(
-          'absolute bottom-0 left-0 right-0 p-6',
+          'absolute bottom-20 left-0 right-0 p-6',
           theme === 'dark' ? 'text-gray-200' : 'text-white'
         )}>
           <div className="flex items-center mb-2">
-            <h2 className="text-3xl font-bold mr-3">{user.name}</h2>
+            <h2 className="text-3xl font-bold mr-3 cursor-pointer" onClick={() => navigate(`/user/${user.id}`)}>{user.name}</h2>
             <span className="text-2xl">{user.age}</span>
             {user.isVerified && (
               <div className={cn(
@@ -133,41 +142,28 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
           )}>
             {user.bio}
           </p>
-        </div>
 
-        {/* Action Buttons */}
-        <div className="absolute bottom-6 right-6 flex gap-4">
-          <button
-            onClick={() => onSwipeLeft(user.id)}
-            disabled={!canSwipe}
-            className={cn(
-              'w-16 h-16 backdrop-blur-lg rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50',
-              theme === 'dark' 
-                ? 'bg-gray-700/50 text-red-400 hover:bg-gray-600/50'
-                : 'bg-white/20 text-red-500 hover:bg-white/30'
-            )}
-          >
-            <X className="w-8 h-8" />
-          </button>
-          
-          <button
-            onClick={() => onSwipeRight(user.id)}
-            disabled={!canSwipe}
-            className={cn(
-              'w-16 h-16 backdrop-blur-lg rounded-full flex items-center justify-center transition-all duration-300 disabled:opacity-50',
-              theme === 'dark' 
-                ? 'bg-gray-700/50 text-green-400 hover:bg-gray-600/50'
-                : 'bg-white/20 text-green-500 hover:bg-white/30'
-            )}
-          >
-            <Heart className="w-8 h-8" fill="currentColor" />
-          </button>
+          <div className="mt-4 flex flex-wrap gap-2">
+            {user.hereFor.map(purpose => (
+              <span key={purpose} className="px-3 py-1 rounded-full text-sm bg-purple-600/20 text-purple-300 backdrop-blur-sm">
+                {purpose}
+              </span>
+            ))}
+          </div>
+
+          {mutualInterests.length > 0 && (
+            <div className="mt-4">
+              <h4 className="font-semibold text-sm text-green-400 mb-2">You both like</h4>
+              <div className="flex flex-wrap gap-2">
+                {mutualInterests.map(interest => (
+                  <span key={interest} className="px-3 py-1 rounded-full text-sm bg-green-600/20 text-green-300 backdrop-blur-sm">
+                    {interest}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-        <ProfileDetailModal 
-          user={user} 
-          isOpen={isModalOpen} 
-          onClose={() => setIsModalOpen(false)} 
-        />
       </div>
     </motion.div>
   );

@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { AuthUser } from '../types';
+import { mockUsers } from '../data/mockData';
 
-const mockUsers: AuthUser[] = [
+// Create mock AuthUser objects for authentication
+const mockAuthUsers: AuthUser[] = [
   {
     id: 'free-user',
     email: 'free@upendo.com',
@@ -45,7 +47,7 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           // Mock login with test accounts
-          const foundUser = mockUsers.find((u) => u.email === email);
+          const foundUser = mockAuthUsers.find((u) => u.email === email);
 
           if (foundUser && password === 'password') {
             set({ user: foundUser, isAuthenticated: true });
@@ -63,12 +65,56 @@ export const useAuthStore = create<AuthState>()(
         set({ user: null, isAuthenticated: false });
       },
 
+      useMessageRequest: () => {
+        const { user } = get();
+        if (!user || user.subscription !== 'free') {
+          return true; // Pro/VIP users have unlimited messages
+        }
+
+        const now = new Date();
+        const resetDate = user.messageRequestResetDate ? new Date(user.messageRequestResetDate) : now;
+
+        if (now >= resetDate) {
+          const newResetDate = new Date(now.setDate(now.getDate() + 7));
+          const updatedUser = { ...user, messageRequestsSent: 1, messageRequestResetDate: newResetDate };
+          set({ user: updatedUser });
+          return true;
+        }
+
+        if ((user.messageRequestsSent || 0) < 3) {
+          const updatedUser = { ...user, messageRequestsSent: (user.messageRequestsSent || 0) + 1 };
+          set({ user: updatedUser });
+          return true;
+        }
+
+        return false;
+      },
+
       signUp: async (newUser: AuthUser) => {
         set({ isLoading: true });
         try {
           // In a real app, this would be an API call to your backend
           // For this mock, we just add the user to the state
           set({ user: newUser, isAuthenticated: true });
+
+          // Automatically create a match with the Upendo assistant
+          const upendoAssistant = mockUsers.find(u => u.id === 'upendo-assistant');
+          if (upendoAssistant) {
+            const { useMatchStore } = await import('./matchStore');
+            const { createMatch, addMessage } = useMatchStore.getState();
+            // Use currentUser from mockData instead of AuthUser
+            const currentUser = mockUsers.find(u => u.id === 'current-user') || mockUsers[0];
+            const match = createMatch(currentUser, upendoAssistant);
+            addMessage(match.id, {
+              id: `msg-${Date.now()}`,
+              matchId: match.id,
+              senderId: upendoAssistant.id,
+              content: `Welcome to Upendo! I'm here to help you get started. A complete profile gets more attention. Why not start by filling out your Details, Delicacies, and Travel sections? Let's make your profile shine! ✨`,
+              timestamp: new Date(),
+              isRead: false,
+              type: 'text',
+            });
+          }
         } catch (error) {
           throw new Error('Sign up failed');
         } finally {

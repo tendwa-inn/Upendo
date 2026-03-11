@@ -17,6 +17,10 @@ export interface User {
   };
   subscription: 'free' | 'pro' | 'vip';
   isVerified: boolean;
+  messageRequestsSent?: number;
+  messageRequestResetDate?: Date;
+  swipeCount?: number;
+  replyRate?: number;
   lastActive: Date;
   online: boolean;
   preferences: {

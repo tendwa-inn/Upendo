@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { Match, Message } from '../types';
+import { Match, Message, User } from '../types';
 
 interface MatchState {
   matches: Match[];
@@ -10,6 +10,7 @@ interface MatchState {
   // Actions
   setMatches: (matches: Match[]) => void;
   addMatch: (match: Match) => void;
+  createMatch: (user1: User, user2: User) => Match;
   selectMatch: (match: Match | null) => void;
   addMessage: (matchId: string, message: Message) => void;
   setMessages: (matchId: string, messages: Message[]) => void;
@@ -30,6 +31,18 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     set((state) => ({
       matches: [match, ...state.matches],
     }));
+  },
+
+  createMatch: (user1, user2) => {
+    const newMatch: Match = {
+      id: `match-${Date.now()}`,
+      user1,
+      user2,
+      timestamp: new Date(),
+      lastMessage: null,
+    };
+    get().addMatch(newMatch);
+    return newMatch;
   },
 
   selectMatch: (match) => {

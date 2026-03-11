@@ -12,6 +12,13 @@ import DiscoverPage from './pages/DiscoverPage';
 import UserProfilePage from './pages/UserProfilePage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
+import AdminLayout from './pages/admin/AdminLayout';
+import AdminDashboard from './pages/admin/AdminDashboard';
+import UserManagement from './pages/admin/UserManagement';
+import ReportsManagement from './pages/admin/ReportsManagement';
+import SystemMessages from './pages/admin/SystemMessages';
+import KeywordFilters from './pages/admin/KeywordFilters';
+import AdminSettings from './pages/admin/AdminSettings';
 import './index.css';
 
 function App() {
@@ -48,6 +55,15 @@ function App() {
           ) : (
             <Route path="/*" element={<UnauthenticatedApp />} />
           )}
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
+            <Route path="reports" element={<ReportsManagement />} />
+            <Route path="messages" element={<SystemMessages />} />
+            <Route path="filters" element={<KeywordFilters />} />
+            <Route path="settings" element={<AdminSettings />} />
+          </Route>
         </Routes>
         <Toaster position="top-center" />
       </div>
@@ -58,12 +74,12 @@ function App() {
 const AuthenticatedApp = () => (
   <Layout>
     <Routes>
-      <Route path="/find" element={<FindPage />} />
-      <Route path="/chat" element={<ChatPage />} />
-      <Route path="/profile" element={<ProfilePage />} />
-      <Route path="/discover" element={<DiscoverPage />} />
-      <Route path="/user/:userId" element={<UserProfilePage />} />
-      <Route path="/" element={<Navigate to="/find" replace />} />
+      <Route path="find" element={<FindPage />} />
+      <Route path="chat" element={<ChatPage />} />
+      <Route path="profile" element={<ProfilePage />} />
+      <Route path="discover" element={<DiscoverPage />} />
+      <Route path="user/:userId" element={<UserProfilePage />} />
+      <Route path="/" element={<Navigate to="find" replace />} />
     </Routes>
   </Layout>
 );
