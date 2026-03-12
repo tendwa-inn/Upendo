@@ -14,6 +14,7 @@ interface SwipeState {
   lastRewindReset: Date;
   outOfSwipesAt: Date | null;
   replenishmentStage: number;
+  lastActivity: Date;
   
   // Actions
   setPotentialMatches: (users: User[]) => void;
@@ -63,6 +64,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   lastRewindReset: new Date(),
   outOfSwipesAt: null,
   replenishmentStage: 0,
+  lastActivity: new Date(),
 
   setPotentialMatches: (users) => {
     const sortedUsers = [...users].sort((a, b) => {
@@ -85,6 +87,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
         remainingSwipes: swipeStats.remainingSwipes - 1,
         totalSwipes: swipeStats.totalSwipes + 1,
       },
+      lastActivity: new Date(),
     });
 
     if (get().swipeStats.remainingSwipes === 0) {

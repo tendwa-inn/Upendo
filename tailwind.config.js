@@ -26,6 +26,14 @@ export default {
           black: '#000000',
           dark: '#1a1a1a',
         },
+        'premium-chat': {
+          'maroon-dark': '#2B0B12',
+          'maroon-light': '#3A0F18',
+          'maroon-bubble': '#5A1C2B',
+          'pink-bright': '#FF4F87',
+          'pink-light': '#FF6A9C',
+          'pink-placeholder': '#B78491',
+        },
       },
       backgroundImage: {
         'gradient-romantic': 'linear-gradient(135deg, #ec4899 0%, #a855f7 50%, #6366f1 100%)',

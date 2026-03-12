@@ -18,6 +18,7 @@ interface MatchState {
   markAsRead: (matchId: string, messageId: string) => void;
   unmatch: (matchId: string) => void;
   checkMatch: (currentUser: User, swipedUser: User) => boolean;
+  editMessage: (matchId: string, messageId: string, newContent: string) => void;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -37,8 +38,22 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   },
 
   addMatch: (match) => {
-    set((state) => ({
-      matches: [match, ...state.matches],
+    set((state) => {
+      if (state.matches.some(m => m.id === match.id)) return {};
+      return { matches: [match, ...state.matches] };
+    });
+  },
+
+  editMessage: (matchId, messageId, newContent) => {
+    set(state => ({
+      messages: {
+        ...state.messages,
+        [matchId]: state.messages[matchId]?.map(msg =>
+          msg.id === messageId
+            ? { ...msg, content: newContent, isEdited: true }
+            : msg
+        ) || [],
+      },
     }));
   },
 
@@ -76,10 +91,26 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   },
 
   addMessage: (matchId, message) => {
-    set((state) => ({
+    set(state => ({
+      matches: state.matches.map(match =>
+        match.id === matchId
+          ? { ...match, lastMessage: message, timestamp: new Date() }
+          : match
+      ),
       messages: {
         ...state.messages,
         [matchId]: [...(state.messages[matchId] || []), message],
+      },
+    }));
+  },
+
+  deleteMessage: (matchId, messageId) => {
+    set(state => ({
+      messages: {
+        ...state.messages,
+        [matchId]: (state.messages[matchId] || []).filter(
+          m => m.id !== messageId
+        ),
       },
     }));
   },

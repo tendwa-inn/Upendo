@@ -43,6 +43,8 @@ export const mockUsers: User[] = [
     drinking: 'socially',
     smoking: 'never',
     firstDate: 'on-a-date',
+    loveLanguage: 'Words of Affirmation',
+    loveLanguage: 'Quality Time',
   },
   {
     id: '2',
@@ -85,6 +87,7 @@ export const mockUsers: User[] = [
     drinking: 'occasionally',
     smoking: 'never',
     firstDate: 'at-home',
+    loveLanguage: 'Acts of Service',
   },
   {
     id: 'upendo-assistant',

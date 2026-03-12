@@ -120,21 +120,61 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
       case 'vintage':
         return (
           <div className="absolute top-1/2 -translate-y-1/2 right-5 flex flex-col items-center space-y-6 z-20">
-            <button onClick={() => onSwipeRight(user.id)} className="flex flex-col items-center text-white font-bold text-xs space-y-1">
-              <Play className="w-10 h-10" />
-              <span>LIKE</span>
+            <button
+              onClick={() => onSwipeRight(user.id)}
+              onMouseDown={() => handlePressStart('play')}
+              onMouseUp={handlePressEnd}
+              onTouchStart={() => handlePressStart('play')}
+              onTouchEnd={handlePressEnd}
+              className="flex flex-col items-center text-white font-bold text-xs space-y-1"
+            >
+              <Play 
+                className={`w-10 h-10 ${activeButton === 'play' ? 'text-green-500' : 'text-white'}`} 
+                strokeWidth={2.5}
+              />
+              <span className={activeButton === 'play' ? 'text-green-500' : 'text-white'}>PLAY</span>
             </button>
-            <button onClick={() => onSwipeLeft(user.id)} className="flex flex-col items-center text-white font-bold text-xs space-y-1">
-              <FastForward className="w-10 h-10" />
-              <span>NOPE</span>
+            <button
+              onClick={() => onSwipeLeft(user.id)}
+              onMouseDown={() => handlePressStart('wind')}
+              onMouseUp={handlePressEnd}
+              onTouchStart={() => handlePressStart('wind')}
+              onTouchEnd={handlePressEnd}
+              className="flex flex-col items-center text-white font-bold text-xs space-y-1"
+            >
+              <FastForward 
+                className={`w-10 h-10 ${activeButton === 'wind' ? 'text-red-500' : 'text-white'}`} 
+                strokeWidth={2.5}
+              />
+              <span className={activeButton === 'wind' ? 'text-red-500' : 'text-white'}>WIND</span>
             </button>
-            <button onClick={onRewind} className="flex flex-col items-center text-white font-bold text-xs space-y-1">
-              <Rewind className="w-10 h-10" />
-              <span>REWIND</span>
+            <button
+              onClick={onRewind}
+              onMouseDown={() => handlePressStart('rewind')}
+              onMouseUp={handlePressEnd}
+              onTouchStart={() => handlePressStart('rewind')}
+              onTouchEnd={handlePressEnd}
+              className="flex flex-col items-center text-white font-bold text-xs space-y-1"
+            >
+              <Rewind 
+                className={`w-10 h-10 ${activeButton === 'rewind' ? 'text-yellow-500' : 'text-white'}`} 
+                strokeWidth={2.5}
+              />
+              <span className={activeButton === 'rewind' ? 'text-yellow-500' : 'text-white'}>REWIND</span>
             </button>
-            <button onClick={onBoost} className="flex flex-col items-center text-white font-bold text-xs space-y-1">
-              <Zap className="w-10 h-10" />
-              <span>BOOST</span>
+            <button
+              onClick={onBoost}
+              onMouseDown={() => handlePressStart('boost')}
+              onMouseUp={handlePressEnd}
+              onTouchStart={() => handlePressStart('boost')}
+              onTouchEnd={handlePressEnd}
+              className="flex flex-col items-center text-white font-bold text-xs space-y-1"
+            >
+              <Zap 
+                className={`w-10 h-10 ${activeButton === 'boost' ? 'text-blue-500' : 'text-white'}`} 
+                strokeWidth={2.5}
+              />
+              <span className={activeButton === 'boost' ? 'text-blue-500' : 'text-white'}>BOOST</span>
             </button>
           </div>
         );
@@ -226,6 +266,55 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
             {user.tribe && (
               <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/80">
                 {user.tribe}
+              </span>
+            )}
+            {user.drinking && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-purple-500/80">
+                {user.drinking === 'socially' ? 'Social Drinker' : 
+                 user.drinking === 'occasionally' ? 'Drinks Occasionally' :
+                 user.drinking === 'never' ? 'Non-Drinker' : 'Drinks'}
+              </span>
+            )}
+            {user.smoking && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-orange-500/80">
+                {user.smoking === 'never' ? 'Non-Smoker' : 
+                 user.smoking === 'occasionally' ? 'Smokes Occasionally' :
+                 user.smoking === 'socially' ? 'Social Smoker' : 'Smoker'}
+              </span>
+            )}
+            {user.education && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-teal-500/80">
+                {user.education === 'bachelors' ? 'Bachelor\'s Degree' :
+                 user.education === 'masters' ? 'Master\'s Degree' :
+                 user.education === 'phd' ? 'PhD' :
+                 user.education === 'high-school' ? 'High School' :
+                 user.education === 'some-college' ? 'Some College' :
+                 user.education === 'associates' ? 'Associate\'s Degree' :
+                 user.education === 'trade-school' ? 'Trade School' :
+                 user.education === 'not-working' ? 'Not Working' :
+                 user.education === 'student' ? 'Student' :
+                 user.education.charAt(0).toUpperCase() + user.education.slice(1)}
+              </span>
+            )}
+            {user.occupation && (
+              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-500/80">
+                {user.occupation === 'accountant' ? 'Accountant' :
+                 user.occupation === 'teacher' ? 'Teacher' :
+                 user.occupation === 'engineer' ? 'Engineer' :
+                 user.occupation === 'doctor' ? 'Doctor' :
+                 user.occupation === 'nurse' ? 'Nurse' :
+                 user.occupation === 'lawyer' ? 'Lawyer' :
+                 user.occupation === 'entrepreneur' ? 'Entrepreneur' :
+                 user.occupation === 'artist' ? 'Artist' :
+                 user.occupation === 'musician' ? 'Musician' :
+                 user.occupation === 'chef' ? 'Chef' :
+                 user.occupation === 'driver' ? 'Driver' :
+                 user.occupation === 'sales' ? 'Sales' :
+                 user.occupation === 'manager' ? 'Manager' :
+                 user.occupation === 'developer' ? 'Developer' :
+                 user.occupation === 'consultant' ? 'Consultant' :
+                 user.occupation === 'not-working' ? 'Not Working' :
+                 user.occupation.charAt(0).toUpperCase() + user.occupation.slice(1)}
               </span>
             )}
           </div>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Camera, Phone, Video, Heart, ArrowLeft, MoreVertical, Plus, Smile, UserX, ShieldX, Flag, Check } from 'lucide-react';
+import { Send, Camera, Phone, Video, Heart, ArrowLeft, MoreVertical, Plus, Smile, UserX, ShieldX, Flag, Check, X, Trash2, MessageSquare, Edit, MoreHorizontal } from 'lucide-react';
 import { Match, Message } from '../../types';
 import { useMatchStore } from '../../stores/matchStore';
 import { mockMessages } from '../../data/mockData';
@@ -17,6 +17,83 @@ interface ChatConversationProps {
 
 import { Link } from 'react-router-dom';
 import { encryptMessage, decryptMessage } from '../../lib/encryption';
+
+const ReplyPreview: React.FC<{ message: Message; onCancel: () => void }> = ({ message, onCancel }) => (
+  <div className="p-2 bg-gray-700/50 rounded-t-xl">
+    <div className="flex justify-between items-center">
+      <p className="text-sm font-bold">Replying to {message.senderId === useAuthStore.getState().user?.id ? "yourself" : "them"}</p>
+      <button onClick={onCancel}><X className="w-4 h-4" /></button>
+    </div>
+    <p className="text-sm text-gray-400 truncate">{decryptMessage(message.content)}</p>
+  </div>
+);
+
+const MessageBubble: React.FC<{ message: Message; onReply: (message: Message) => void; onOptionsMenuClick: (message: Message, anchor: HTMLElement) => void }> = ({ message, onReply, onOptionsMenuClick }) => {
+  const { user: currentUser } = useAuthStore();
+  const isSender = message.senderId === currentUser?.id;
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleDragEnd = (event: any, info: any) => {
+    if (info.offset.x < -50 && !isSender) {
+      onReply(message);
+    } else if (info.offset.x > 50 && isSender) {
+      onReply(message);
+    }
+  };
+
+  return (
+    <div className={`group flex items-center gap-1 ${isSender ? 'justify-end' : 'justify-start'}`}>
+      {isSender && (
+        <button ref={menuButtonRef} onClick={() => onOptionsMenuClick(message, menuButtonRef.current!)} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-white/10 transition-opacity">
+          <MoreHorizontal className="w-4 h-4 text-gray-400" />
+        </button>
+      )}
+       <motion.div
+        drag="x"
+        dragConstraints={{ left: 0, right: 0 }}
+        onDragEnd={handleDragEnd}
+        className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
+        {!isSender && (
+          <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+            <SafeImage
+              src={useMatchStore.getState().matches.find(m => m.id === message.matchId)?.user2.photos[0] || ''}
+              alt="avatar"
+              className="w-full h-full object-cover"
+            />
+          </div>
+        )}
+        <div
+          className={`max-w-xs md:max-w-md p-3 rounded-2xl shadow-lg ${ 
+            isSender ? 'bg-gradient-to-br from-[#FF4F87] to-[#FF6A9C] text-white rounded-br-none' : 'bg-[#5A1C2B] text-white rounded-bl-none'
+          }`}>
+          {message.parentMessage && (
+            <div className="bg-black/20 p-2 rounded-lg mb-2">
+              <p className="text-xs font-bold">Replying to {message.parentMessage.senderId === currentUser?.id ? "yourself" : "them"}</p>
+              <p className="text-xs text-white/80 truncate">{decryptMessage(message.parentMessage.content)}</p>
+            </div>
+          )}
+          {message.type === 'text' ? (
+            <p className="text-sm">{decryptMessage(message.content)}</p>
+          ) : message.type === 'gif' ? (
+            <img src={message.content} alt="gif" className="w-full h-auto rounded-lg" />
+          ) : message.type === 'image' ? (
+            <img src={message.content} alt="image" className="w-full h-auto rounded-lg" />
+          ) : null}
+          <div className={`text-xs mt-1 flex items-center gap-1 ${isSender ? 'text-white/70 justify-end' : 'text-gray-400'}`}>
+            <span>{new Date(message.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+            {message.isEdited && <span className="text-xs text-white/70">(edited)</span>}
+            {isSender && <Check className="w-4 h-4" />}
+          </div>
+        </div>
+      </motion.div>
+      {!isSender && (
+        <button ref={menuButtonRef} onClick={() => onOptionsMenuClick(message, menuButtonRef.current!)} className="opacity-0 group-hover:opacity-100 p-1 rounded-full hover:bg-white/10 transition-opacity">
+          <MoreHorizontal className="w-4 h-4 text-gray-400" />
+        </button>
+      )}
+    </div>
+  );
+};
 
 const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const { theme } = useThemeStore();
@@ -42,12 +119,15 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const otherUser = match.user1.id === currentUser?.id ? match.user2 : match.user1;
   
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>(mockMessages[match.id] || []);
+  const { messages: storeMessages, addMessage, selectMatch, unmatch, editMessage, deleteMessage } = useMatchStore();
+  const messages = storeMessages[match.id] || [];
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
   const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
-  const { addMessage, selectMatch, unmatch } = useMatchStore();
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Message | null>(null);
+  const [messageForMenu, setMessageForMenu] = useState<{ message: Message; anchor: HTMLElement } | null>(null);
   const { submitReport } = useAdminStore();
   const { addBlockedUser } = useAuthStore();
 
@@ -76,18 +156,37 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
     if (!message.trim() || !currentUser) return;
-    const newMessage: Message = {
-      id: `msg-${Date.now()}`,
-      matchId: match.id,
-      senderId: currentUser.id,
-      content: encryptMessage(message),
-      timestamp: new Date(),
-      isRead: false,
-      type: 'text',
-    };
-    setMessages([...messages, newMessage]);
-    addMessage(match.id, newMessage);
+
+    if (editingMessage) {
+      editMessage(match.id, editingMessage.id, encryptMessage(message));
+      setEditingMessage(null);
+    } else {
+      const newMessage: Message = {
+        id: `msg-${Date.now()}`,
+        matchId: match.id,
+        senderId: currentUser.id,
+        content: encryptMessage(message),
+        timestamp: new Date(),
+        isRead: false,
+        type: 'text',
+        replyTo: replyingTo?.id,
+        parentMessage: replyingTo ? { content: replyingTo.content, senderId: replyingTo.senderId } : undefined,
+      };
+      addMessage(match.id, newMessage);
+    }
+
     setMessage('');
+    setReplyingTo(null);
+  };
+
+  const handleDeleteMessage = (message: Message) => {
+    const twentyFourHours = 24 * 60 * 60 * 1000;
+    if (new Date().getTime() - new Date(message.timestamp).getTime() < twentyFourHours) {
+      deleteMessage(match.id, message.id);
+      setLongPressedMessage(null);
+    } else {
+      toast.error("Cannot delete messages older than 24 hours.");
+    }
   };
 
   const handleGifSelect = (gif: any) => {
@@ -101,7 +200,6 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
       isRead: false,
       type: 'gif',
     };
-    setMessages([...messages, newMessage]);
     addMessage(match.id, newMessage);
     setIsGifPickerOpen(false);
   };
@@ -120,7 +218,6 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
           isRead: false,
           type: 'image',
         };
-        setMessages([...messages, newMessage]);
         addMessage(match.id, newMessage);
       };
       reader.readAsDataURL(file);
@@ -144,13 +241,13 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-stone-900 text-white relative">
+    <div className="flex flex-col h-full bg-gradient-to-b from-[#22090E] to-[#2E0C13] text-white relative">
       <div className="absolute inset-0 z-0">
-        <img src="/Upendo Chat Theme.png" alt="Chat background" className="w-full h-full object-cover opacity-5" />
+        <img src="/Upendo Chat Theme.png" alt="Chat background" className="w-full h-full object-cover opacity-[.03]" />
       </div>
       <div className="relative z-10 flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex items-center justify-between p-4 pt-safe-top border-b border-white/10 bg-stone-900">
+      <div className="flex items-center justify-between p-4 pt-safe-top border-b border-white/10 bg-[#2A0A11]">
         <div className="flex items-center space-x-3">
           <button onClick={handleBack} className="p-1 rounded-full hover:bg-white/10">
             <ArrowLeft className="w-6 h-6" />
@@ -166,7 +263,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
             </div>
             <div>
               <h3 className="font-semibold">{otherUser.name}</h3>
-              <p className={`text-sm ${otherUser.online ? 'text-green-400' : 'text-gray-400'}`}>
+              <p className={`text-sm ${otherUser.online ? 'text-[#FF4F87]' : 'text-gray-400'}`}>
                 {otherUser.online ? 'Online now' : 'Offline'}
               </p>
             </div>
@@ -203,41 +300,49 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
       <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-end">
         <div className="space-y-2">
           <div className="text-center text-xs text-gray-500 uppercase my-4">Yesterday</div>
-          {messages.map((msg, index) => {
-            const isSender = msg.senderId === currentUser?.id;
-            return (
-              <div key={index} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
-                {!isSender && (
-                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
-                    <SafeImage
-                      src={otherUser.photos[0]}
-                      alt={otherUser.name}
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                )}
-                <div
-                  className={`max-w-xs md:max-w-md p-3 rounded-2xl ${
-                    isSender ? 'bg-pink-500 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'
-                  }`}>
-                  {msg.type === 'text' ? (
-                    <p className="text-sm">{decryptMessage(msg.content)}</p>
-                  ) : msg.type === 'gif' ? (
-                    <img src={msg.content} alt="gif" className="w-full h-auto rounded-lg" />
-                  ) : msg.type === 'image' ? (
-                    <img src={msg.content} alt="image" className="w-full h-auto rounded-lg" />
-                  ) : null}
-                  <div className={`text-xs mt-1 flex items-center gap-1 ${isSender ? 'text-white/70 justify-end' : 'text-gray-400'}`}>
-                    <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                    {isSender && <Check className="w-4 h-4" />}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+          {messages.map((msg, index) => (
+            <MessageBubble key={index} message={msg} onReply={() => { setReplyingTo(msg); setMessageForMenu(null); }} onOptionsMenuClick={setMessageForMenu} />
+          ))}
           <div ref={messagesEndRef} />
         </div>
       </div>
+
+      {messageForMenu && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setMessageForMenu(null)}></div>
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            style={{
+              position: 'absolute',
+              top: messageForMenu.anchor.getBoundingClientRect().bottom + 8,
+              left: messageForMenu.anchor.getBoundingClientRect().left,
+            }}
+            className="bg-gray-800 rounded-lg shadow-lg z-20 flex divide-x divide-gray-700"
+          >
+            <button onClick={() => { setReplyingTo(messageForMenu.message); setMessageForMenu(null); }} className="flex items-center px-4 py-2 text-left text-sm hover:bg-white/5 rounded-l-lg">
+              <MessageSquare className="w-4 h-4 mr-2" />
+            </button>
+            {messageForMenu.message.senderId === currentUser?.id ? (
+              new Date().getTime() - new Date(messageForMenu.message.timestamp).getTime() < 24 * 60 * 60 * 1000 && (
+                <>
+                  <button onClick={() => { setEditingMessage(messageForMenu.message); setMessage(decryptMessage(messageForMenu.message.content)); setMessageForMenu(null); }} className="flex items-center px-4 py-2 text-left text-sm hover:bg-white/5">
+                    <Edit className="w-4 h-4 mr-2" />
+                  </button>
+                  <button onClick={() => {handleDeleteMessage(messageForMenu.message); setMessageForMenu(null);}} className="flex items-center px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 rounded-r-lg">
+                    <Trash2 className="w-4 h-4 mr-2" />
+                  </button>
+                </>
+              )
+            ) : (
+              <button onClick={() => { setIsReportModalOpen(true); setMessageForMenu(null); }} className="flex items-center px-4 py-2 text-left text-sm hover:bg-white/5 rounded-r-lg">
+                <Flag className="w-4 h-4 mr-2" />
+              </button>
+            )}
+          </motion.div>
+        </>
+      )}
 
       <ReportUserModal
         isOpen={isReportModalOpen}
@@ -252,10 +357,11 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
       )}
 
       {/* Message Input */}
-      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
+      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10 bg-[#3A0F18]">
+        {replyingTo && <ReplyPreview message={replyingTo} onCancel={() => setReplyingTo(null)} />}
         <input type="file" id="image-upload" className="hidden" onChange={handleImageSelect} accept="image/*" />
-        <div className="flex items-center space-x-2 bg-gray-700/50 rounded-full px-2">
-           <button type="button" onClick={() => document.getElementById('image-upload')?.click()} className="p-2 text-gray-400 hover:text-white">
+        <div className="flex items-center space-x-2 bg-premium-chat-maroon-dark rounded-full px-2">
+           <button type="button" onClick={() => document.getElementById('image-upload')?.click()} className="p-2 text-[#B78491] hover:text-white">
             <Plus className="w-6 h-6" />
           </button>
           <input
@@ -263,15 +369,15 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none px-2 py-3"
+            className="flex-1 bg-transparent text-white placeholder-[#B78491] focus:outline-none px-2 py-3"
           />
-          <button type="button" onClick={() => setIsGifPickerOpen(!isGifPickerOpen)} className="p-2 text-gray-400 hover:text-white">
+          <button type="button" onClick={() => setIsGifPickerOpen(!isGifPickerOpen)} className="p-2 text-[#B78491] hover:text-white">
             <Smile className="w-6 h-6" />
           </button>
            <button
             type="submit"
             disabled={!message.trim()}
-            className="p-3 rounded-full bg-pink-500 text-white disabled:bg-gray-500 transition-all">
+            className="p-3 rounded-full bg-[#FF4F87] text-white disabled:bg-gray-500 transition-all">
             <Send className="w-5 h-5" />
           </button>
         </div>

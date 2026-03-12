@@ -8,6 +8,7 @@ export interface User {
   tribe?: string;
   online: boolean;
   subscription?: 'vip' | 'premium';
+  loveLanguage?: string;
 }
 
 export interface Message {
@@ -18,6 +19,9 @@ export interface Message {
   timestamp: Date;
   isRead: boolean;
   type: 'text' | 'image' | 'gif';
+  replyTo?: string;
+  parentMessage?: { content: string; senderId: string };
+  isEdited?: boolean;
 }
 
 export interface Match {
