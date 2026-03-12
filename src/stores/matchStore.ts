@@ -6,7 +6,8 @@ interface MatchState {
   selectedMatch: Match | null;
   messages: Record<string, Message[]>; // matchId -> messages
   isLoading: boolean;
-  
+  userLikes: Record<string, Set<string>>; // Simulating a backend table of likes
+
   // Actions
   setMatches: (matches: Match[]) => void;
   addMatch: (match: Match) => void;
@@ -15,6 +16,8 @@ interface MatchState {
   addMessage: (matchId: string, message: Message) => void;
   setMessages: (matchId: string, messages: Message[]) => void;
   markAsRead: (matchId: string, messageId: string) => void;
+  unmatch: (matchId: string) => void;
+  checkMatch: (currentUser: User, swipedUser: User) => boolean;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -22,6 +25,12 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   selectedMatch: null,
   messages: {},
   isLoading: false,
+  userLikes: {
+    // Simulate that some users have liked the current user
+    'user-2': new Set(['current-user']),
+    'user-4': new Set(['current-user']),
+    'user-5': new Set(['current-user']),
+  },
 
   setMatches: (matches) => {
     set({ matches });
@@ -30,6 +39,13 @@ export const useMatchStore = create<MatchState>((set, get) => ({
   addMatch: (match) => {
     set((state) => ({
       matches: [match, ...state.matches],
+    }));
+  },
+
+  unmatch: (matchId) => {
+    set((state) => ({
+      matches: state.matches.filter((match) => match.id !== matchId),
+      selectedMatch: state.selectedMatch?.id === matchId ? null : state.selectedMatch,
     }));
   },
 
@@ -43,6 +59,16 @@ export const useMatchStore = create<MatchState>((set, get) => ({
     };
     get().addMatch(newMatch);
     return newMatch;
+  },
+
+  checkMatch: (currentUser, swipedUser) => {
+    const { userLikes } = get();
+    const doesSwipedUserLikeCurrentUser = userLikes[swipedUser.id]?.has(currentUser.id);
+    if (doesSwipedUserLikeCurrentUser) {
+      get().createMatch(currentUser, swipedUser);
+      return true;
+    }
+    return false;
   },
 
   selectMatch: (match) => {

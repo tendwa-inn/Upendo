@@ -10,11 +10,14 @@ interface LayoutProps {
 }
 
 import { useAuthStore } from '../stores/authStore';
+import { useMatchStore } from '../stores/matchStore';
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
+  const { selectedMatch } = useMatchStore();
+  const isFindPage = location.pathname === '/find';
 
   const getNavColors = () => {
     if (theme === 'dark') {
@@ -63,7 +66,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   return (
     <div className="relative min-h-screen">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900 to-black" />
+      <div className="absolute inset-0 bg-stone-900" />
       <div
         className="absolute inset-0"
         style={{
@@ -83,12 +86,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </main>
 
         {/* Bottom Navigation */}
+        {!selectedMatch && (
         <nav className={cn(
-          "fixed bottom-0 left-0 right-0 pb-safe-area-bottom", // Added padding for safe area
-          user?.subscription === 'vip' ? "bg-transparent" : "backdrop-blur-lg border-t",
-          user?.subscription !== 'vip' && (theme === 'dark' 
-            ? 'bg-gray-900/90 border-gray-700' 
-            : 'bg-white/90 border-white/20')
+          "fixed bottom-0 left-0 right-0 pb-safe-area-bottom",
+          "bg-transparent",
+          "border-transparent"
         )}>
           <div className="flex justify-around items-center h-20 px-4">
             {navItems.map((item) => {
@@ -129,6 +131,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             })}
           </div>
         </nav>
+        )}
       </div>
     </div>
   );

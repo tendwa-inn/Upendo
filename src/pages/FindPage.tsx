@@ -1,15 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useSwipeStore } from '../stores/swipeStore';
-
 import { useMatchStore } from '../stores/matchStore';
 import { useAuthStore } from '../stores/authStore';
+import { useUiStore } from '../stores/uiStore';
+import { useNotificationStore } from '../stores/notificationStore';
 import { calculateVisibilityScore } from '../lib/utils';
 import SwipeCard from '../components/swipe/SwipeCard';
 import FilterModal from '../components/modals/FilterModal';
-import { SlidersHorizontal } from 'lucide-react';
-import { User } from '../types';
-import { mockUsers } from '../data/mockData'; // We will create this file next
+import { SlidersHorizontal, Bell } from 'lucide-react';
+import { mockUsers } from '../data/mockData';
+import { Link } from 'react-router-dom';
 import toast from 'react-hot-toast';
 
 const FindPage: React.FC = () => {
@@ -18,85 +19,144 @@ const FindPage: React.FC = () => {
     currentCardIndex,
     swipeLeft,
     swipeRight,
+    rewind,
     setPotentialMatches,
     canSwipe,
-    getRemainingSwipes,
+    outOfSwipesAt,
+    replenishmentStage,
   } = useSwipeStore();
   const { user: currentUser } = useAuthStore();
-  
-  const { addMatch } = useMatchStore();
+  const { addMatch, checkMatch } = useMatchStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<any>({});
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  const { buttonStyle } = useUiStore();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
 
   useEffect(() => {
-    // Simulate fetching users and sorting them by visibility score
+    fetchNotifications();
+  }, [fetchNotifications]);
+
+  useEffect(() => {
     setTimeout(() => {
       const sortedUsers = mockUsers.sort((a, b) => calculateVisibilityScore(b) - calculateVisibilityScore(a));
       setPotentialMatches(sortedUsers);
       setIsLoading(false);
     }, 1000);
-    toast('You have 50 free swipes for today!', {
-      icon: '🎉',
-      duration: 4000,
-    });
+    toast('You have 50 free swipes for today!', { icon: '🎉', duration: 4000 });
   }, [setPotentialMatches]);
 
-
+  const handleSwipe = () => {
+    setCurrentPhotoIndex(0);
+  };
 
   const handleSwipeRight = (userId: string) => {
     const swipedUser = potentialMatches.find((u) => u.id === userId);
-    if (!swipedUser) return;
+    if (!swipedUser || !currentUser) return;
 
     swipeRight(userId);
+    handleSwipe();
 
-    // Simulate a match (50% chance)
-    if (Math.random() > 0.5) {
+    if (checkMatch(currentUser, swipedUser)) {
       toast.success(`You matched with ${swipedUser.name}!`);
-      addMatch({
-        id: `match-${Date.now()}`,
-        user1: mockUsers[0], // Mock current user
-        user2: swipedUser,
-        timestamp: new Date(),
-      });
     }
   };
-
-  // Randomly assign canMessage flag for free users
-  const processedMatches = React.useMemo(() => {
-    if (currentUser?.subscription === 'free') {
-      let filteredUsers = potentialMatches.filter(user => {
-        if (filters.ageRange && (user.age < filters.ageRange[0] || user.age > filters.ageRange[1])) return false;
-        if (filters.tribe && user.tribe !== filters.tribe) return false;
-        return true;
-      });
-      return filteredUsers.map(u => ({ ...u, canMessage: Math.random() < 0.3 })); // 30% chance
-    }
-    return potentialMatches;
-  }, [potentialMatches, currentUser, filters]);
 
   const handleSwipeLeft = (userId: string) => {
     swipeLeft(userId);
+    handleSwipe();
   };
+
+  const processedMatches = React.useMemo(() => {
+    let filteredUsers = potentialMatches.filter(user => {
+      if (filters.ageRange && (user.age < filters.ageRange[0] || user.age > filters.ageRange[1])) return false;
+      if (filters.tribe && user.tribe !== filters.tribe) return false;
+      return true;
+    });
+    if (currentUser?.subscription === 'free') {
+      return filteredUsers.map(u => ({ ...u, canMessage: Math.random() < 0.3 }));
+    }
+    return filteredUsers;
+  }, [potentialMatches, currentUser, filters]);
+
+  const getNextReplenishmentTime = () => {
+    if (!outOfSwipesAt || replenishmentStage > 3) return null;
+
+    const replenishmentHours = [2, 8, 10];
+    const stageIndex = replenishmentStage - 1;
+    
+    if (stageIndex >= replenishmentHours.length) return null;
+
+    const replenishmentTime = new Date(outOfSwipesAt.getTime() + replenishmentHours[stageIndex] * 60 * 60 * 1000);
+    return replenishmentTime;
+  };
+
+  const [timeToNext, setTimeToNext] = useState('');
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const nextTime = getNextReplenishmentTime();
+      if (nextTime) {
+        const diff = nextTime.getTime() - new Date().getTime();
+        if (diff > 0) {
+          const hours = Math.floor(diff / (1000 * 60 * 60));
+          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+          setTimeToNext(`${hours}h ${minutes}m`);
+        } else {
+          setTimeToNext('Now!');
+        }
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [outOfSwipesAt, replenishmentStage]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full text-white">Loading...</div>;
   }
 
-  const handleApplyFilters = (newFilters: any) => {
-    setFilters(newFilters);
-  };
+  const handleApplyFilters = (newFilters: any) => setFilters(newFilters);
+  const handleBoost = () => console.log("Boost action");
+
+  const currentMatch = processedMatches[currentCardIndex];
 
   return (
-    <div className="h-screen w-screen flex flex-col items-center justify-start p-4 pt-8 text-white">
+    <div className="relative h-screen w-screen text-white bg-stone-900">
+      {/* Background logo */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+        <img src="/Logo white.png" alt="Upendo Logo" className="w-3/4 h-3/4 object-contain opacity-5" />
+      </div>
       {/* Header */}
-      <div className="w-full max-w-md flex justify-end items-center mb-4 px-2">
-        <button onClick={() => setIsFilterModalOpen(true)} className="flex items-center space-x-2 bg-white/10 p-2 rounded-lg">
-          <SlidersHorizontal className="w-5 h-5" />
-        </button>
+      <div className="absolute top-0 left-0 right-0 z-20 w-full max-w-md mx-auto flex justify-between items-center p-4 pt-safe-top">
+        <button onClick={() => setIsFilterModalOpen(true)} className="p-2"><SlidersHorizontal className="w-6 h-6" /></button>
+        <h1 className="text-2xl font-bold">Find</h1>
+        <Link to="/notifications" className="p-2 relative">
+          <Bell className="w-6 h-6" />
+          {unreadCount > 0 && (
+            <div className="absolute top-1 right-1 w-4 h-4 bg-pink-500 rounded-full text-xs flex items-center justify-center">
+              {unreadCount}
+            </div>
+          )}
+        </Link>
       </div>
 
-      <div className="relative w-full max-w-md flex-grow" style={{ maxHeight: '80vh' }}>
+      {/* Photo Progress */}
+      {currentMatch && (
+        <div className="absolute bottom-20 left-4 right-4 z-20 flex space-x-1">
+          {currentMatch.photos.map((_, index) => (
+            <div key={index} className="h-1.5 flex-1 rounded-full bg-white/30 backdrop-blur-sm">
+              <motion.div
+                className={`h-full rounded-full ${buttonStyle === 'white-clean' ? 'bg-white' : 'bg-yellow-500'}`}
+                initial={{ width: '0%' }}
+                animate={{ width: index === currentPhotoIndex ? '100%' : '0%' }}
+                transition={{ duration: 0.2, ease: 'linear' }}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="absolute inset-0">
         <AnimatePresence>
           {processedMatches.slice(currentCardIndex).map((user, index) => (
             <SwipeCard
@@ -104,27 +164,30 @@ const FindPage: React.FC = () => {
               user={user}
               onSwipeLeft={handleSwipeLeft}
               onSwipeRight={handleSwipeRight}
+              onRewind={rewind}
+              onBoost={handleBoost}
               isActive={index === 0}
               canSwipe={canSwipe()}
+              currentPhotoIndex={currentPhotoIndex}
+              setCurrentPhotoIndex={setCurrentPhotoIndex}
             />
           ))}
         </AnimatePresence>
         
         {currentCardIndex >= processedMatches.length && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-center">
-            <div>
+            <div className="mt-24">
               <h2 className="text-2xl font-bold">No more profiles</h2>
+              {currentUser?.subscription === 'free' && outOfSwipesAt && replenishmentStage <= 3 && (
+                <p className="mt-2">Next swipes in: {timeToNext}</p>
+              )}
               <p className="mt-2">Check back later for more potential matches.</p>
             </div>
           </div>
         )}
       </div>
 
-      <FilterModal 
-        isOpen={isFilterModalOpen}
-        onClose={() => setIsFilterModalOpen(false)}
-        onApply={handleApplyFilters}
-      />
+      <FilterModal isOpen={isFilterModalOpen} onClose={() => setIsFilterModalOpen(false)} onApply={handleApplyFilters} />
     </div>
   );
 };

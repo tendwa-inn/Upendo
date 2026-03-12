@@ -10,6 +10,7 @@ import ChatPage from './pages/ChatPage';
 import ProfilePage from './pages/ProfilePage';
 import DiscoverPage from './pages/DiscoverPage';
 import UserProfilePage from './pages/UserProfilePage';
+import NotificationsPage from './pages/NotificationsPage';
 import LoginPage from './pages/LoginPage';
 import SignUpPage from './pages/SignUpPage';
 import AdminLayout from './pages/admin/AdminLayout';
@@ -79,6 +80,7 @@ const AuthenticatedApp = () => (
       <Route path="profile" element={<ProfilePage />} />
       <Route path="discover" element={<DiscoverPage />} />
       <Route path="user/:userId" element={<UserProfilePage />} />
+      <Route path="notifications" element={<NotificationsPage />} />
       <Route path="/" element={<Navigate to="find" replace />} />
     </Routes>
   </Layout>

@@ -1,12 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Send, Camera, Phone, Video, Heart, ArrowLeft, Lock } from 'lucide-react';
+import { Send, Camera, Phone, Video, Heart, ArrowLeft, MoreVertical, Plus, Smile, UserX, ShieldX, Flag, Check } from 'lucide-react';
 import { Match, Message } from '../../types';
 import { useMatchStore } from '../../stores/matchStore';
 import { mockMessages } from '../../data/mockData';
 import SafeImage from '../common/SafeImage';
 import { useAuthStore } from '../../stores/authStore';
+import { useAdminStore } from '../../stores/adminStore';
+import ReportUserModal from '../modals/ReportUserModal';
 import { useThemeStore } from '../../stores/themeStore';
+import GifPicker from './GifPicker';
 
 interface ChatConversationProps {
   match: Match;
@@ -19,7 +22,6 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const { theme } = useThemeStore();
   const { user: currentUser } = useAuthStore();
   
-  // Safety check: if match is not provided, show a fallback UI
   if (!match) {
     return (
       <div className={`flex flex-col h-full ${theme === 'dark' ? 'bg-gray-800' : 'bg-white'}`}>
@@ -42,36 +44,25 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const [message, setMessage] = useState('');
   const [messages, setMessages] = useState<Message[]>(mockMessages[match.id] || []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const [isTyping, setIsTyping] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const { addMessage, selectMatch } = useMatchStore();
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [isGifPickerOpen, setIsGifPickerOpen] = useState(false);
+  const { addMessage, selectMatch, unmatch } = useMatchStore();
+  const { submitReport } = useAdminStore();
+  const { addBlockedUser } = useAuthStore();
 
-  const handleTyping = () => {
-    console.log('Typing detected...');
-    setIsTyping(true);
-    // Also simulate the other user seeing you type
-    setTimeout(() => {
-      setIsTyping(false);
-      console.log('Typing indicator hidden');
-    }, 2000); // Stop showing typing after 2 seconds
+  const handleBack = () => {
+    selectMatch(null);
   };
 
-  // Simulate other user typing
-  const [otherUserTyping, setOtherUserTyping] = useState(false);
-  
   useEffect(() => {
-    const interval = setInterval(() => {
-      if (Math.random() < 0.1) { // 10% chance of typing
-        console.log('Other user started typing');
-        setOtherUserTyping(true);
-        setTimeout(() => {
-          setOtherUserTyping(false);
-          console.log('Other user stopped typing');
-        }, 3000);
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        handleBack();
       }
-    }, 5000);
-    
-    return () => clearInterval(interval);
+    };
+    window.addEventListener('keydown', handleEscape);
+    return () => window.removeEventListener('keydown', handleEscape);
   }, []);
 
   useEffect(() => {
@@ -84,186 +75,209 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
 
   const handleSendMessage = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!message.trim()) return;
-
+    if (!message.trim() || !currentUser) return;
     const newMessage: Message = {
       id: `msg-${Date.now()}`,
       matchId: match.id,
-      senderId: 'current-user',
+      senderId: currentUser.id,
       content: encryptMessage(message),
       timestamp: new Date(),
       isRead: false,
       type: 'text',
     };
-
     setMessages([...messages, newMessage]);
     addMessage(match.id, newMessage);
     setMessage('');
   };
 
-  const sendHeart = () => {
-    const heartMessage: Message = {
+  const handleGifSelect = (gif: any) => {
+    if (!currentUser) return;
+    const newMessage: Message = {
       id: `msg-${Date.now()}`,
       matchId: match.id,
-      senderId: 'current-user',
-      content: '❤️',
+      senderId: currentUser.id,
+      content: gif.images.downsized.url,
       timestamp: new Date(),
       isRead: false,
-      type: 'text',
+      type: 'gif',
     };
+    setMessages([...messages, newMessage]);
+    addMessage(match.id, newMessage);
+    setIsGifPickerOpen(false);
+  };
 
-    setMessages([...messages, heartMessage]);
-    addMessage(match.id, heartMessage);
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && currentUser) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const newMessage: Message = {
+          id: `msg-${Date.now()}`,
+          matchId: match.id,
+          senderId: currentUser.id,
+          content: event.target?.result as string,
+          timestamp: new Date(),
+          isRead: false,
+          type: 'image',
+        };
+        setMessages([...messages, newMessage]);
+        addMessage(match.id, newMessage);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleReportSubmit = (reason: string, details: string) => {
+    if (currentUser) {
+      submitReport(currentUser.id, otherUser.id, reason, details);
+      setIsReportModalOpen(false);
+      setIsMenuOpen(false);
+      alert('Report submitted. Thank you for your feedback.');
+    }
+  };
+
+  const handleBlock = () => {
+    addBlockedUser(otherUser.id);
+    unmatch(match.id);
+    selectMatch(null);
+    alert(`${otherUser.name} has been blocked.`);
   };
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-stone-900 text-white relative">
+      <div className="absolute inset-0 z-0">
+        <img src="/Upendo Chat Theme.png" alt="Chat background" className="w-full h-full object-cover opacity-5" />
+      </div>
+      <div className="relative z-10 flex flex-col h-full">
       {/* Chat Header */}
-      <div className={`flex items-center justify-between p-4 border-b ${theme === 'dark' ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-white/50'} backdrop-blur-sm transition-all duration-300`}>
-        <Link to={`/user/${otherUser.id}`} className="flex items-center space-x-3">
-          <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-lg" style={{ backgroundImage: 'url(/upendo-logo.png)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
-            <SafeImage
-              src={otherUser.photos[0]}
-              alt={otherUser.name}
-              className="w-full h-full object-cover"
-              fallbackSrc="/upendo-logo.png"
-            />
-          </div>
-          <div>
-            <h3 className={`font-semibold ${theme === 'dark' ? 'text-white' : 'text-gray-800'}`}>{otherUser.name}</h3>
-            <p className={`text-sm ${otherUserTyping ? 'text-orange-400' : isRecording ? 'text-red-500' : otherUser.online ? 'text-green-500' : theme === 'dark' ? 'text-gray-400' : 'text-gray-500'}`}>
-              {otherUserTyping ? '🔥 TYPING...' : isRecording ? '🎤 Recording Audio...' : otherUser.online ? '🟢 Online' : 'Active 2h ago'}
-            </p>
-            <div className="flex items-center text-xs text-gray-500 mt-1">
-              <Lock className="w-3 h-3 mr-1" />
-              <span>End-to-end encrypted</span>
+      <div className="flex items-center justify-between p-4 pt-safe-top border-b border-white/10 bg-stone-900">
+        <div className="flex items-center space-x-3">
+          <button onClick={handleBack} className="p-1 rounded-full hover:bg-white/10">
+            <ArrowLeft className="w-6 h-6" />
+          </button>
+          <Link to={`/user/${otherUser.id}`} className="flex items-center space-x-3">
+            <div className="w-10 h-10 rounded-full overflow-hidden">
+               <SafeImage
+                src={otherUser.photos[0]}
+                alt={otherUser.name}
+                className="w-full h-full object-cover"
+                fallbackSrc="/upendo-logo.png"
+              />
             </div>
-          </div>
-        </Link>
-        
-        <div className="flex items-center space-x-2">
-          <button className={`p-2 rounded-full ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}>
-            <Phone className="w-5 h-5" />
+            <div>
+              <h3 className="font-semibold">{otherUser.name}</h3>
+              <p className={`text-sm ${otherUser.online ? 'text-green-400' : 'text-gray-400'}`}>
+                {otherUser.online ? 'Online now' : 'Offline'}
+              </p>
+            </div>
+          </Link>
+        </div>
+        <div className="relative">
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="p-1 rounded-full hover:bg-white/10">
+            <MoreVertical className="w-6 h-6" />
           </button>
-          <button className={`p-2 rounded-full ${theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'}`}>
-            <Video className="w-5 h-5" />
-          </button>
+          <AnimatePresence>
+            {isMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="absolute top-full right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-lg z-20"
+              >
+                <button onClick={() => { unmatch(match.id); selectMatch(null); }} className="flex items-center w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10">
+                  <UserX className="w-4 h-4 mr-2" /> Unmatch
+                </button>
+                <button onClick={handleBlock} className="flex items-center w-full px-4 py-2 text-left text-sm text-red-400 hover:bg-red-500/10">
+                  <ShieldX className="w-4 h-4 mr-2" /> Block
+                </button>
+                <button onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }} className="flex items-center w-full px-4 py-2 text-left text-sm hover:bg-white/5">
+                  <Flag className="w-4 h-4 mr-2" /> Report
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-end space-y-4">
-        <AnimatePresence>
-          {messages.map((msg) => (
-            <motion.div
-              key={msg.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className={`flex ${
-                msg.senderId === 'current-user' ? 'justify-end' : 'justify-start'
-              }`}>
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-2xl ${
-                  msg.senderId === 'current-user'
-                    ? theme === 'dark'
-                      ? 'bg-gradient-to-r from-purple-600 to-blue-600 text-white'
-                      : 'bg-gradient-to-r from-pink-500 to-purple-600 text-white'
-                    : theme === 'dark'
-                      ? 'bg-gray-700 text-gray-200'
-                      : 'bg-gray-200 text-gray-800'
-                }`}>
-                <p className="text-sm">{decryptMessage(msg.content)}</p>
-                <p
-                  className={`text-xs mt-1 ${
-                    msg.senderId === 'current-user'
-                      ? theme === 'dark'
-                        ? 'text-gray-300'
-                        : 'text-white/70'
-                      : theme === 'dark'
-                        ? 'text-gray-400'
-                        : 'text-gray-500'
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col justify-end">
+        <div className="space-y-2">
+          <div className="text-center text-xs text-gray-500 uppercase my-4">Yesterday</div>
+          {messages.map((msg, index) => {
+            const isSender = msg.senderId === currentUser?.id;
+            return (
+              <div key={index} className={`flex items-end gap-2 ${isSender ? 'justify-end' : 'justify-start'}`}>
+                {!isSender && (
+                  <div className="w-8 h-8 rounded-full overflow-hidden flex-shrink-0">
+                    <SafeImage
+                      src={otherUser.photos[0]}
+                      alt={otherUser.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                )}
+                <div
+                  className={`max-w-xs md:max-w-md p-3 rounded-2xl ${
+                    isSender ? 'bg-pink-500 text-white rounded-br-none' : 'bg-gray-700 text-gray-200 rounded-bl-none'
                   }`}>
-                  {new Date(msg.timestamp).toLocaleTimeString([], {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        
-        {/* Typing indicator */}
-        {otherUserTyping && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="flex justify-start">
-            <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl ${theme === 'dark' ? 'bg-gray-700 text-gray-200' : 'bg-gray-200 text-gray-800'} shadow-lg`}>
-              <div className="flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
+                  {msg.type === 'text' ? (
+                    <p className="text-sm">{decryptMessage(msg.content)}</p>
+                  ) : msg.type === 'gif' ? (
+                    <img src={msg.content} alt="gif" className="w-full h-auto rounded-lg" />
+                  ) : msg.type === 'image' ? (
+                    <img src={msg.content} alt="image" className="w-full h-auto rounded-lg" />
+                  ) : null}
+                  <div className={`text-xs mt-1 flex items-center gap-1 ${isSender ? 'text-white/70 justify-end' : 'text-gray-400'}`}>
+                    <span>{new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    {isSender && <Check className="w-4 h-4" />}
+                  </div>
                 </div>
-                <span className="text-sm">typing...</span>
               </div>
-            </div>
-          </motion.div>
-        )}
-        
-        <div ref={messagesEndRef} />
+            );
+          })}
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
+      <ReportUserModal
+        isOpen={isReportModalOpen}
+        onClose={() => setIsReportModalOpen(false)}
+        onSubmit={handleReportSubmit}
+      />
+
+      {isGifPickerOpen && (
+        <div className="absolute bottom-20 right-4 z-20">
+          <GifPicker onGifClick={handleGifSelect} />
+        </div>
+      )}
+
       {/* Message Input */}
-      <form
-        onSubmit={handleSendMessage}
-        className={`p-4 border-t ${theme === 'dark' ? 'border-gray-700 bg-gray-900/50' : 'border-gray-200 bg-white/50'} backdrop-blur-sm`}>
-        <div className="flex items-center space-x-2">
-          <button
-            type="button"
-            onClick={sendHeart}
-            className={`p-2 rounded-full ${theme === 'dark' ? 'text-pink-500 hover:text-pink-400 hover:bg-gray-700' : 'text-pink-500 hover:text-pink-600 hover:bg-pink-50'}`}>
-            <Heart className="w-5 h-5" fill="currentColor" />
+      <form onSubmit={handleSendMessage} className="p-4 border-t border-white/10">
+        <input type="file" id="image-upload" className="hidden" onChange={handleImageSelect} accept="image/*" />
+        <div className="flex items-center space-x-2 bg-gray-700/50 rounded-full px-2">
+           <button type="button" onClick={() => document.getElementById('image-upload')?.click()} className="p-2 text-gray-400 hover:text-white">
+            <Plus className="w-6 h-6" />
           </button>
-          
-          <button
-            type="button"
-            onClick={() => {
-              setIsRecording(true);
-              setTimeout(() => {
-                setIsRecording(false);
-              }, 3000);
-            }}
-            className={`p-2 rounded-full ${isRecording ? (theme === 'dark' ? 'bg-red-600 text-white' : 'bg-red-500 text-white') : theme === 'dark' ? 'text-gray-400 hover:text-white hover:bg-gray-700' : 'text-gray-500 hover:text-gray-600 hover:bg-gray-100'}`}>
-            <Camera className="w-5 h-5" />
+          <input
+            type="text"
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            placeholder="Type a message..."
+            className="flex-1 bg-transparent text-white placeholder-gray-400 focus:outline-none px-2 py-3"
+          />
+          <button type="button" onClick={() => setIsGifPickerOpen(!isGifPickerOpen)} className="p-2 text-gray-400 hover:text-white">
+            <Smile className="w-6 h-6" />
           </button>
-
-          <div className="flex-1 relative">
-            <input
-              type="text"
-              value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                handleTyping();
-              }}
-              placeholder="Type a message..."
-              className={`w-full px-4 py-2 rounded-full ${theme === 'dark' ? 'bg-gray-800 border-gray-700 text-white placeholder-gray-400 focus:ring-purple-500' : 'bg-gray-100 border-gray-200 text-gray-800 placeholder-gray-500 focus:ring-pink-400'} focus:outline-none focus:border-transparent`}
-            />
-          </div>
-
-          <button
+           <button
             type="submit"
             disabled={!message.trim()}
-            className={`p-2 rounded-full text-white transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${theme === 'dark' ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700' : 'bg-gradient-to-r from-pink-500 to-purple-600 hover:from-pink-600 hover:to-purple-700'}`}>
+            className="p-3 rounded-full bg-pink-500 text-white disabled:bg-gray-500 transition-all">
             <Send className="w-5 h-5" />
           </button>
         </div>
       </form>
     </div>
+  </div>
   );
 };
 

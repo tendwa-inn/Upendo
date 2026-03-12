@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sun, Moon, User, Camera, Settings, Crown, Shield, Phone, MapPin, Heart, LogOut, Edit3, CheckCircle, Star, Plus, BookOpen, Ruler, GlassWater, Cigarette } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
+import { useUiStore, ButtonStyle } from '../stores/uiStore';
 import { useThemeStore } from '../stores/themeStore';
 import { currentUser } from '../data/mockData';
 import toast from 'react-hot-toast';
@@ -47,6 +48,8 @@ const ProfilePage: React.FC = () => {
   const currentSubscription = subscriptionConfig[user?.subscription || 'free'];
   const SubscriptionIcon = currentSubscription.icon;
 
+  const { buttonStyle, setButtonStyle } = useUiStore();
+
   const handleSaveProfile = () => {
     setIsEditing(false);
     toast.success('Profile updated successfully!');
@@ -62,7 +65,7 @@ const ProfilePage: React.FC = () => {
   };
 
   return (
-    <div className={`min-h-screen p-4 ${currentSubscription.theme}`}>
+    <div className={`min-h-screen p-4`}>
       <div className="max-w-4xl mx-auto">
         {/* Profile Header */}
         <motion.div
@@ -341,6 +344,33 @@ const ProfilePage: React.FC = () => {
                 Enabled
               </button>
             </div>
+          </div>
+        </motion.div>
+
+        {/* Button Style Settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="bg-white/10 backdrop-blur-lg rounded-3xl p-6 mb-6"
+        >
+          <h3 className="text-xl font-bold text-white mb-4">Button Style</h3>
+          <div className="flex justify-around">
+            <button 
+              onClick={() => setButtonStyle('upendo-color')}
+              className={`px-4 py-2 rounded-xl text-white font-semibold transition-all ${buttonStyle === 'upendo-color' ? 'bg-pink-500' : 'bg-white/20'}`}>
+              Upendo Color
+            </button>
+            <button 
+              onClick={() => setButtonStyle('white-clean')}
+              className={`px-4 py-2 rounded-xl text-white font-semibold transition-all ${buttonStyle === 'white-clean' ? 'bg-pink-500' : 'bg-white/20'}`}>
+              White Clean
+            </button>
+            <button 
+              onClick={() => setButtonStyle('vintage')}
+              className={`px-4 py-2 rounded-xl text-white font-semibold transition-all ${buttonStyle === 'vintage' ? 'bg-pink-500' : 'bg-white/20'}`}>
+              Vintage
+            </button>
           </div>
         </motion.div>
 
