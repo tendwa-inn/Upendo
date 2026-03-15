@@ -27,10 +27,7 @@ export interface User {
   preferences?: { distance: number; ageRange?: [number, number] };
   swipeCount?: number;
   replyRate?: number;
-}
-
-export interface AuthUser extends User {
-  token?: string;
+  loveLanguage?: string;
 }
 
 export interface Message {
@@ -41,6 +38,9 @@ export interface Message {
   timestamp: Date;
   isRead: boolean;
   type: 'text' | 'image' | 'gif';
+  replyTo?: string;
+  parentMessage?: { content: string; senderId: string };
+  isEdited?: boolean;
 }
 
 export interface Match {

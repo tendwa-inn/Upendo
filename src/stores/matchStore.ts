@@ -10,7 +10,12 @@ interface MatchState {
   createMatch: (user2Id: string) => Promise<Match | null>;
   selectMatch: (match: Match | null) => void;
   addMessage: (matchId: string, content: string, type: 'text' | 'image' | 'gif') => Promise<void>;
+  setMessages: (matchId: string, messages: Message[]) => void;
+  markAsRead: (matchId: string, messageId: string) => void;
   unmatch: (matchId: string) => Promise<void>;
+  checkMatch: (currentUser: User, swipedUser: User) => boolean;
+  editMessage: (matchId: string, messageId: string, newContent: string) => void;
+  deleteMessage: (matchId: string, messageId: string) => void;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
@@ -96,5 +101,15 @@ export const useMatchStore = create<MatchState>((set, get) => ({
       matches: state.matches.filter((match) => match.id !== matchId),
       selectedMatch: state.selectedMatch?.id === matchId ? null : state.selectedMatch,
     }));
+  },
+
+  editMessage: (matchId, messageId, newContent) => {
+    // This should also be a supabase call
+    console.log('editMessage not implemented');
+  },
+
+  deleteMessage: (matchId, messageId) => {
+    // This should also be a supabase call
+    console.log('deleteMessage not implemented');
   },
 }));

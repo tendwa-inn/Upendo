@@ -17,6 +17,7 @@ interface SwipeState {
   fetchPotentialMatches: () => Promise<void>;
   swipeLeft: (userId: string) => Promise<void>;
   swipeRight: (userId: string) => Promise<void>;
+  lastActivity: Date;
   rewind: () => void;
   resetDailySwipes: () => void;
   canSwipe: () => boolean;
@@ -38,6 +39,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   lastRewindReset: new Date(),
   outOfSwipesAt: null,
   replenishmentStage: 0,
+  lastActivity: new Date(),
 
   fetchPotentialMatches: async () => {
     const { data, error } = await supabase.from('profiles').select('*');
@@ -74,6 +76,7 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
         ...swipeStats,
         passes: swipeStats.passes + 1,
       },
+      lastActivity: new Date(),
     });
   },
 

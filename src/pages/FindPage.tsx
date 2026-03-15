@@ -30,6 +30,7 @@ const FindPage: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<any>({});
+  const [isInterstitialVisible, setIsInterstitialVisible] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const { buttonStyle } = useUiStore();
   const { unreadCount, fetchNotifications } = useNotificationStore();
@@ -52,21 +53,30 @@ const FindPage: React.FC = () => {
   };
 
   const handleSwipeRight = (userId: string) => {
+    if (isInterstitialVisible) return;
     const swipedUser = potentialMatches.find((u) => u.id === userId);
     if (!swipedUser || !currentUser) return;
 
     swipeRight(userId);
-    handleSwipe();
-
-    if (Math.random() < 0.5) { // Simplified 50% match chance
-      createMatch(swipedUser.id);
-      toast.success(`You matched with ${swipedUser.name}!`);
-    }
+    setIsInterstitialVisible(true);
+    setTimeout(() => {
+      handleSwipe();
+      setIsInterstitialVisible(false);
+      if (Math.random() < 0.5) { // Simplified 50% match chance
+        createMatch(swipedUser.id);
+        toast.success(`You matched with ${swipedUser.name}!`);
+      }
+    }, 1000);
   };
 
   const handleSwipeLeft = (userId: string) => {
+    if (isInterstitialVisible) return;
     swipeLeft(userId);
-    handleSwipe();
+    setIsInterstitialVisible(true);
+    setTimeout(() => {
+      handleSwipe();
+      setIsInterstitialVisible(false);
+    }, 1000);
   };
 
   const processedMatches = React.useMemo(() => {
@@ -113,7 +123,7 @@ const FindPage: React.FC = () => {
   }, [outOfSwipesAt, replenishmentStage]);
 
   if (isLoading) {
-    return <div className="flex items-center justify-center h-full text-white">Loading...</div>;
+    return <div className="flex items-center justify-center h-full text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">Loading...</div>;
   }
 
   const handleApplyFilters = (newFilters: any) => setFilters(newFilters);
@@ -122,7 +132,7 @@ const FindPage: React.FC = () => {
   const currentMatch = processedMatches[currentCardIndex];
 
   return (
-    <div className="relative h-screen w-screen text-white bg-stone-900">
+    <div className="relative h-screen w-screen text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">
       {/* Background logo */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
         <img src="/Logo white.png" alt="Upendo Logo" className="w-3/4 h-3/4 object-contain opacity-5" />
@@ -159,7 +169,7 @@ const FindPage: React.FC = () => {
 
       <div className="absolute inset-0">
         <AnimatePresence>
-          {processedMatches.slice(currentCardIndex).map((user, index) => (
+          {!isInterstitialVisible && processedMatches.slice(currentCardIndex).map((user, index) => (
             <SwipeCard
               key={user.id}
               user={user}
@@ -177,7 +187,7 @@ const FindPage: React.FC = () => {
         
         {currentCardIndex >= processedMatches.length && !isLoading && (
           <div className="absolute inset-0 flex items-center justify-center text-center">
-            <div className="mt-24">
+            <div className="mt-64">
               <h2 className="text-2xl font-bold">No more profiles</h2>
               {currentUser?.subscription === 'free' && outOfSwipesAt && replenishmentStage <= 3 && (
                 <p className="mt-2">Next swipes in: {timeToNext}</p>
