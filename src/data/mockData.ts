@@ -91,7 +91,6 @@ export const mockUsers: User[] = [
     smoking: 'never',
     firstDate: 'on-a-date',
     loveLanguage: 'Words of Affirmation',
-    loveLanguage: 'Quality Time',
   },
   {
     id: '2',

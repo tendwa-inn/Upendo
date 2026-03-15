@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useMatchStore } from '../stores/matchStore';
-<<<<<<< HEAD
-import { Settings, SlidersHorizontal, Check } from 'lucide-react';
-import { Match } from '../types';
-=======
 import { Search, SlidersHorizontal, Check } from 'lucide-react';
 import { Match, User } from '../types';
->>>>>>> 8b783fd8e98547dabf835663ef7d5dcbb7eb78b3
 import ChatConversation from '../components/chat/ChatConversation';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';

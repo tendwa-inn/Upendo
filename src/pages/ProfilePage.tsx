@@ -214,6 +214,7 @@ const ProfilePage: React.FC = () => {
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-4">My Spotlights</h3>
             <div className="grid md:grid-cols-2 gap-4">
+              <div className="p-4 bg-white/50 rounded-2xl">
                 <h4 className="font-semibold text-white mb-2">Delicacies</h4>
                 {user.aboutMe?.delicacies?.map((item, index) => (
                   <div key={index} className="flex items-center space-x-3 mb-2">
@@ -246,6 +247,10 @@ const ProfilePage: React.FC = () => {
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-4">My Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
+                <BookOpen className="w-5 h-5 text-gray-300" />
+                <div>
+                  <p className="font-semibold text-gray-200">Education</p>
                   <p className="text-gray-300 capitalize">{user.education || '-'}</p>
                 </div>
               </div>

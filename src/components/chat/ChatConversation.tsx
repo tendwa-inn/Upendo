@@ -119,12 +119,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const otherUser = match.user1.id === currentUser?.id ? match.user2 : match.user1;
   
   const [message, setMessage] = useState('');
-<<<<<<< HEAD
   const [messages, setMessages] = useState<Message[]>(match.messages || []);
-=======
-  const { messages: storeMessages, addMessage, selectMatch, unmatch, editMessage, deleteMessage } = useMatchStore();
-  const messages = storeMessages[match.id] || [];
->>>>>>> 8b783fd8e98547dabf835663ef7d5dcbb7eb78b3
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);

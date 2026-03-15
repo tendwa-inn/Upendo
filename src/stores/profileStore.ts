@@ -1,14 +1,14 @@
 import { create } from 'zustand';
-import { currentUser as initialUser } from '../data/mockData';
 import { User } from '../types';
+import { useAuthStore } from './authStore';
 
 interface ProfileState {
-  currentUser: User;
+  currentUser: User | null;
   updateCurrentUser: (data: Partial<User>) => void;
 }
 
 export const useProfileStore = create<ProfileState>((set) => ({
-  currentUser: initialUser,
+  currentUser: useAuthStore.getState().user,
   updateCurrentUser: (data) =>
-    set((state) => ({ currentUser: { ...state.currentUser, ...data } })),
+    set((state) => ({ currentUser: state.currentUser ? { ...state.currentUser, ...data } : null})),
 }));
