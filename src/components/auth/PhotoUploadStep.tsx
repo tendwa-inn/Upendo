@@ -5,7 +5,7 @@ import { Camera, Plus, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const PhotoUploadStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [photos, setPhotos] = useState<string[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -26,7 +26,7 @@ const PhotoUploadStep: React.FC = () => {
       toast.error('Please upload at least 3 photos');
       return;
     }
-    updateData({ photos });
+    updateFormData({ photos });
     nextStep();
   };
 

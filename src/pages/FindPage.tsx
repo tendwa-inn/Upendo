@@ -20,13 +20,13 @@ const FindPage: React.FC = () => {
     swipeLeft,
     swipeRight,
     rewind,
-    setPotentialMatches,
+    fetchPotentialMatches,
     canSwipe,
     outOfSwipesAt,
     replenishmentStage,
   } = useSwipeStore();
   const { user: currentUser } = useAuthStore();
-  const { addMatch, checkMatch } = useMatchStore();
+  const { createMatch, matches } = useMatchStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<any>({});
@@ -39,13 +39,13 @@ const FindPage: React.FC = () => {
   }, [fetchNotifications]);
 
   useEffect(() => {
-    setTimeout(() => {
-      const sortedUsers = mockUsers.sort((a, b) => calculateVisibilityScore(b) - calculateVisibilityScore(a));
-      setPotentialMatches(sortedUsers);
+    const loadData = async () => {
+      setIsLoading(true);
+      await fetchPotentialMatches();
       setIsLoading(false);
-    }, 1000);
-    toast('You have 50 free swipes for today!', { icon: '🎉', duration: 4000 });
-  }, [setPotentialMatches]);
+    };
+    loadData();
+  }, [fetchPotentialMatches]);
 
   const handleSwipe = () => {
     setCurrentPhotoIndex(0);
@@ -58,7 +58,8 @@ const FindPage: React.FC = () => {
     swipeRight(userId);
     handleSwipe();
 
-    if (checkMatch(currentUser, swipedUser)) {
+    if (Math.random() < 0.5) { // Simplified 50% match chance
+      createMatch(swipedUser.id);
       toast.success(`You matched with ${swipedUser.name}!`);
     }
   };

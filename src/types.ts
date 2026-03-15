@@ -1,13 +1,36 @@
+export type Subscription = 'free' | 'pro' | 'vip' | 'premium' | 'admin';
+
 export interface User {
   id: string;
   name: string;
+  email: string;
   photos: string[];
   age: number;
   bio: string;
   interests: string[];
   tribe?: string;
   online: boolean;
-  subscription?: 'vip' | 'premium';
+  subscription?: Subscription;
+  dateOfBirth?: Date;
+  gender?: 'man' | 'woman' | 'other';
+  lookingFor?: 'men' | 'women' | 'both';
+  hereFor?: string[];
+  location?: { latitude: number; longitude: number; city: string };
+  isVerified?: boolean;
+  aboutMe?: { delicacies?: string[]; travel?: string[] };
+  education?: string;
+  height?: number;
+  drinking?: string;
+  smoking?: string;
+  religion?: string;
+  firstDate?: string;
+  preferences?: { distance: number; ageRange?: [number, number] };
+  swipeCount?: number;
+  replyRate?: number;
+}
+
+export interface AuthUser extends User {
+  token?: string;
 }
 
 export interface Message {
@@ -45,4 +68,21 @@ export interface Notification {
   message: string;
   relatedUser?: User;
   link?: string;
+}
+
+export interface Story {
+  id: string;
+  userId: string;
+  imageUrl: string;
+  createdAt: Date;
+}
+
+export interface SwipeCard extends User {
+  distance: number;
+}
+
+export interface SwipeStats {
+  likes: number;
+  passes: number;
+  matches: number;
 }

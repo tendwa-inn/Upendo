@@ -3,7 +3,7 @@ import { useSignUpStore } from '../../stores/signUpStore';
 import { motion } from 'framer-motion';
 
 const DobStep: React.FC = () => {
-  const { formData, updateData, nextStep } = useSignUpStore();
+  const { formData, updateFormData, nextStep } = useSignUpStore();
   const [error, setError] = useState('');
 
   const handleNext = () => {
@@ -20,8 +20,8 @@ const DobStep: React.FC = () => {
       <h2 className="text-3xl font-bold mb-6 text-white">When is your birthday?</h2>
       <input
         type="date"
-        value={formData.dateOfBirth}
-        onChange={(e) => updateData({ dateOfBirth: e.target.value })}
+        value={formData.dateOfBirth ? formData.dateOfBirth.toISOString().split('T')[0] : ''}
+        onChange={(e) => updateFormData({ dateOfBirth: new Date(e.target.value) })}
         className="w-full p-4 bg-white/10 text-white rounded-lg mb-4"
       />
       {error && <p className="text-red-500 mb-4">{error}</p>}

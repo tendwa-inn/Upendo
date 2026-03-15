@@ -4,48 +4,22 @@ import { Sun, Moon, User, Camera, Settings, Crown, Shield, Phone, MapPin, Heart,
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore, ButtonStyle } from '../stores/uiStore';
 import { useThemeStore } from '../stores/themeStore';
-import { currentUser } from '../data/mockData';
 import toast from 'react-hot-toast';
+import { subscriptionConfig } from '../data/mockData';
 
 const ProfilePage: React.FC = () => {
   const { user, logout } = useAuthStore();
   const { theme, toggleTheme } = useThemeStore();
   const [isEditing, setIsEditing] = useState(false);
-  const [bio, setBio] = useState(currentUser.bio);
-  const [age, setAge] = useState(currentUser.age);
-  const [location, setLocation] = useState(currentUser.location.city);
+  const [bio, setBio] = useState(user?.bio || '');
+  const [age, setAge] = useState(user?.age || 0);
+  const [location, setLocation] = useState(user?.location?.city || '');
 
-  const subscriptionConfig = {
-    free: {
-      title: 'Free Account',
-      color: 'text-gray-600',
-      bgColor: 'bg-gray-100',
-      icon: User,
-      features: ['50 swipes first day', '10 daily swipes', 'Basic filters'],
-      price: 'Free',
-      theme: 'gradient-romantic',
-    },
-    pro: {
-      title: 'Pro Account',
-      color: 'text-white',
-      bgColor: 'bg-pro-grey',
-      icon: Shield,
-      features: ['Unlimited swipes', 'Blue verification', 'Advanced filters', 'See who liked you'],
-      price: 'K20/week or K100/month',
-      theme: 'gradient-pro',
-    },
-    vip: {
-      title: 'VIP Account',
-      color: 'text-yellow-600',
-      bgColor: 'bg-yellow-100',
-      icon: Crown,
-      features: ['Exclusive lobby', 'Gold verification', 'International mode', 'Priority visibility'],
-      price: 'K50/week',
-      theme: 'vip-gradient',
-    },
-  };
+  if (!user) {
+    return <div>Loading...</div>;
+  }
 
-  const currentSubscription = subscriptionConfig[user?.subscription || 'free'];
+  const currentSubscription = subscriptionConfig[user.subscription || 'free'];
   const SubscriptionIcon = currentSubscription.icon;
 
   const { buttonStyle, setButtonStyle } = useUiStore();
@@ -67,7 +41,6 @@ const ProfilePage: React.FC = () => {
   return (
     <div className={`min-h-screen p-4`}>
       <div className="max-w-4xl mx-auto">
-        {/* Profile Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -91,11 +64,10 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Profile Photo */}
           <div className="flex items-center space-x-6 mb-6">
             <div className="relative">
               <img
-                src={currentUser.photos[0]}
+                src={user.photos[0]}
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-4 border-white/50"
               />
@@ -106,12 +78,12 @@ const ProfilePage: React.FC = () => {
             
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h2 className="text-2xl font-bold text-white">{currentUser.name}</h2>
+                <h2 className="text-2xl font-bold text-white">{user.name}</h2>
                 <span className="text-xl text-gray-300">{age}</span>
-                {user?.subscription === 'vip' && (
+                {user.subscription === 'vip' && (
                   <img src="/VIP.png" alt="VIP" className="w-6 h-6 ml-2" />
                 )}
-                {currentUser.isVerified && (
+                {user.isVerified && (
                   <CheckCircle className="w-6 h-6 text-blue-400" />
                 )}
               </div>
@@ -130,7 +102,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* Bio */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-2">About Me</h3>
             {isEditing ? (
@@ -146,17 +117,14 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
 
-          {/* About Me Sections */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">My Spotlights</h3>
             <div className="grid md:grid-cols-2 gap-4">
-              {/* Delicacies */}
               <div className="p-4 bg-white/50 rounded-2xl">
                 <h4 className="font-semibold text-gray-800 mb-2">Delicacies</h4>
-                {currentUser.aboutMe.delicacies?.map((item, index) => (
+                {user.aboutMe?.delicacies?.map((item, index) => (
                   <div key={index} className="flex items-center space-x-3 mb-2">
-                    {item.photo && <img src={item.photo} alt={item.food} className="w-10 h-10 rounded-lg object-cover" />}
-                    <p className="text-gray-700">{item.food}</p>
+                    <p className="text-gray-700">{item}</p>
                   </div>
                 ))}
                 {isEditing && (
@@ -166,13 +134,11 @@ const ProfilePage: React.FC = () => {
                 )}
               </div>
 
-              {/* Travel */}
               <div className="p-4 bg-white/50 rounded-2xl">
                 <h4 className="font-semibold text-gray-800 mb-2">Travel</h4>
-                {currentUser.aboutMe.travel?.map((item, index) => (
+                {user.aboutMe?.travel?.map((item, index) => (
                   <div key={index} className="mb-2">
-                    <p className="font-semibold text-gray-700">{item.place}</p>
-                    <p className="text-sm text-gray-600">{item.summary}</p>
+                    <p className="font-semibold text-gray-700">{item}</p>
                   </div>
                 ))}
                 {isEditing && (
@@ -184,7 +150,6 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          {/* My Details */}
           <div className="mb-6">
             <h3 className="text-lg font-semibold text-white mb-4">My Details</h3>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
@@ -192,42 +157,42 @@ const ProfilePage: React.FC = () => {
                 <BookOpen className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">Education</p>
-                  <p className="text-gray-300 capitalize">{currentUser.education || '-'}</p>
+                  <p className="text-gray-300 capitalize">{user.education || '-'}</p>
                 </div>
               </div>
               <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
                 <Ruler className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">Height</p>
-                  <p className="text-gray-300">{currentUser.height ? `${currentUser.height} cm` : '-'}</p>
+                  <p className="text-gray-300">{user.height ? `${user.height} cm` : '-'}</p>
                 </div>
               </div>
               <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
                 <GlassWater className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">Drinking</p>
-                  <p className="text-gray-300 capitalize">{currentUser.drinking || '-'}</p>
+                  <p className="text-gray-300 capitalize">{user.drinking || '-'}</p>
                 </div>
               </div>
               <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
                 <Cigarette className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">Smoking</p>
-                  <p className="text-gray-300 capitalize">{currentUser.smoking || '-'}</p>
+                  <p className="text-gray-300 capitalize">{user.smoking || '-'}</p>
                 </div>
               </div>
               <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
                 <User className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">Religion</p>
-                  <p className="text-gray-300">{currentUser.religion || '-'}</p>
+                  <p className="text-gray-300">{user.religion || '-'}</p>
                 </div>
               </div>
               <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
                 <Heart className="w-5 h-5 text-gray-300" />
                 <div>
                   <p className="font-semibold text-gray-200">First Date</p>
-                  <p className="text-gray-300 capitalize">{currentUser.firstDate?.replace('-', ' ') || '-'}</p>
+                  <p className="text-gray-300 capitalize">{user.firstDate?.replace('-', ' ') || '-'}</p>
                 </div>
               </div>
             </div>
@@ -251,7 +216,6 @@ const ProfilePage: React.FC = () => {
           )}
         </motion.div>
 
-        {/* Subscription Status */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -266,7 +230,7 @@ const ProfilePage: React.FC = () => {
           <div className="grid md:grid-cols-3 gap-4">
             {Object.entries(subscriptionConfig).map(([key, config]) => {
               const Icon = config.icon;
-              const isCurrent = user?.subscription === key;
+              const isCurrent = user.subscription === key;
               
               return (
                 <div
@@ -304,7 +268,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Settings */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -332,7 +295,7 @@ const ProfilePage: React.FC = () => {
                 <Heart className="w-5 h-5 text-gray-300" />
                 <span className="text-white">Distance Preference</span>
               </div>
-              <span className="text-gray-300 text-sm">{currentUser.preferences.distance}km</span>
+              <span className="text-gray-300 text-sm">{user.preferences?.distance}km</span>
             </div>
             
             <div className="flex items-center justify-between p-3 bg-white/20 rounded-xl">
@@ -347,7 +310,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Button Style Settings */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -374,7 +336,6 @@ const ProfilePage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Logout */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

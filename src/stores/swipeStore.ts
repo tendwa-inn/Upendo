@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { User, SwipeCard, SwipeStats } from '../types';
-import { currentUser } from '../data/mockData';
+import { supabase } from '../lib/supabaseClient';
+import { User, SwipeStats } from '../types';
 import { useAuthStore } from './authStore';
 import toast from 'react-hot-toast';
 
@@ -14,11 +14,9 @@ interface SwipeState {
   lastRewindReset: Date;
   outOfSwipesAt: Date | null;
   replenishmentStage: number;
-  
-  // Actions
-  setPotentialMatches: (users: User[]) => void;
-  swipeLeft: (userId: string) => void;
-  swipeRight: (userId: string) => void;
+  fetchPotentialMatches: () => Promise<void>;
+  swipeLeft: (userId: string) => Promise<void>;
+  swipeRight: (userId: string) => Promise<void>;
   rewind: () => void;
   resetDailySwipes: () => void;
   canSwipe: () => boolean;
@@ -26,36 +24,13 @@ interface SwipeState {
   checkAndReplenishSwipes: () => void;
 }
 
-const calculateMatchScore = (user: User, currentUser: User): number => {
-  let score = 0;
-
-  // Tribe similarity
-  if (user.tribe && user.tribe === currentUser.tribe) {
-    score += 0.25;
-  }
-
-  // "Here for" similarity
-  const commonPurposes = user.hereFor.filter(p => currentUser.hereFor.includes(p));
-  score += commonPurposes.length * 0.1;
-
-  // Interest similarity
-  const commonInterests = user.interests.filter(i => currentUser.interests.includes(i));
-  score += commonInterests.length * 0.05;
-
-  // Location (already filtered, but could be a factor)
-  // For now, we assume all users in potentialMatches are within the distance preference
-
-  return score;
-};
-
 export const useSwipeStore = create<SwipeState>((set, get) => ({
   potentialMatches: [],
   currentCardIndex: 0,
   swipeStats: {
-    dailySwipes: 0,
-    remainingSwipes: 50, // Free users get 50 swipes first day
-    lastReset: new Date(),
-    totalSwipes: 0,
+    likes: 0,
+    passes: 0,
+    matches: 0,
   },
   isSwiping: false,
   likedIds: new Set(),
@@ -64,41 +39,60 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
   outOfSwipesAt: null,
   replenishmentStage: 0,
 
-  setPotentialMatches: (users) => {
-    const sortedUsers = [...users].sort((a, b) => {
-      const scoreA = calculateMatchScore(a, currentUser);
-      const scoreB = calculateMatchScore(b, currentUser);
-      return scoreB - scoreA; // Sort in descending order of score
-    });
-    set({ potentialMatches: sortedUsers, currentCardIndex: 0 });
+  fetchPotentialMatches: async () => {
+    const { data, error } = await supabase.from('profiles').select('*');
+    if (error) {
+      console.error('Error fetching potential matches:', error);
+      return;
+    }
+    const currentUser = useAuthStore.getState().user;
+    if (currentUser) {
+      const filteredData = data.filter(u => u.id !== currentUser.id);
+      set({ potentialMatches: filteredData, currentCardIndex: 0 });
+    }
   },
 
-  swipeLeft: (userId) => {
+  swipeLeft: async (userId) => {
     const { currentCardIndex, swipeStats } = get();
-    if (swipeStats.remainingSwipes <= 0) return;
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return;
+
+    const { error } = await supabase.from('swipes').insert({ 
+      swiper_id: currentUser.id,
+      swiped_id: userId,
+      direction: 'left',
+    });
+
+    if (error) {
+      toast.error('Something went wrong.');
+      return;
+    }
 
     set({
       currentCardIndex: currentCardIndex + 1,
       swipeStats: {
         ...swipeStats,
-        dailySwipes: swipeStats.dailySwipes + 1,
-        remainingSwipes: swipeStats.remainingSwipes - 1,
-        totalSwipes: swipeStats.totalSwipes + 1,
+        passes: swipeStats.passes + 1,
       },
     });
-
-    if (get().swipeStats.remainingSwipes === 0) {
-      const user = useAuthStore.getState().user;
-      if (user?.subscription === 'free') {
-        set({ outOfSwipesAt: new Date(), replenishmentStage: 1 });
-      }
-    }
   },
 
-  swipeRight: (userId) => {
+  swipeRight: async (userId) => {
     const { currentCardIndex, swipeStats, likedIds } = get();
-    if (swipeStats.remainingSwipes <= 0) return;
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return;
 
+    const { error } = await supabase.from('swipes').insert({ 
+      swiper_id: currentUser.id,
+      swiped_id: userId,
+      direction: 'right',
+    });
+
+    if (error) {
+      toast.error('Something went wrong.');
+      return;
+    }
+    
     const newLikedIds = new Set(likedIds);
     newLikedIds.add(userId);
 
@@ -106,19 +100,10 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
       currentCardIndex: currentCardIndex + 1,
       swipeStats: {
         ...swipeStats,
-        dailySwipes: swipeStats.dailySwipes + 1,
-        remainingSwipes: swipeStats.remainingSwipes - 1,
-        totalSwipes: swipeStats.totalSwipes + 1,
+        likes: swipeStats.likes + 1,
       },
       likedIds: newLikedIds,
     });
-
-    if (get().swipeStats.remainingSwipes === 0) {
-      const user = useAuthStore.getState().user;
-      if (user?.subscription === 'free') {
-        set({ outOfSwipesAt: new Date(), replenishmentStage: 1 });
-      }
-    }
   },
 
   rewind: () => {
@@ -130,7 +115,6 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     if (user?.subscription === 'free') {
       if (now.getTime() - lastRewindReset.getTime() > oneWeek) {
         set({ rewindCount: 5, lastRewindReset: now });
-        // Re-fetch state after update
         const updatedState = get();
         if (updatedState.rewindCount <= 0) {
           toast.error("You have no rewinds left for this week.");
@@ -153,60 +137,35 @@ export const useSwipeStore = create<SwipeState>((set, get) => ({
     }
   },
 
-
-
   resetDailySwipes: () => {
-    const { swipeStats } = get();
-    set({
-      swipeStats: {
-        ...swipeStats,
-        dailySwipes: 0,
-        remainingSwipes: 10, // Reset to 10 for subsequent days
-        lastReset: new Date(),
-      },
-    });
+    console.log('Resetting daily swipes (not implemented)');
   },
 
   canSwipe: () => {
-    get().checkAndReplenishSwipes();
-    const { swipeStats } = get();
-    return swipeStats.remainingSwipes > 0;
+    return true; // Simplified
   },
 
   getRemainingSwipes: () => {
-    const { swipeStats } = get();
-    return swipeStats.remainingSwipes;
+    return 99; // Simplified
   },
 
   checkAndReplenishSwipes: () => {
-    const { outOfSwipesAt, replenishmentStage, swipeStats } = get();
+    const { outOfSwipesAt, replenishmentStage } = get();
     const user = useAuthStore.getState().user;
-
-    if (user?.subscription !== 'free' || !outOfSwipesAt) return;
+    if (!outOfSwipesAt || user?.subscription !== 'free') return;
 
     const now = new Date();
-    const elapsedHours = (now.getTime() - outOfSwipesAt.getTime()) / (1000 * 60 * 60);
+    const hoursPassed = (now.getTime() - outOfSwipesAt.getTime()) / (1000 * 60 * 60);
 
-    const replenishmentStages = [
-      { hours: 2, swipes: 4, stage: 1 },
-      { hours: 8, swipes: 4, stage: 2 },
-      { hours: 10, swipes: 4, stage: 3 },
-    ];
-
-    for (const stage of replenishmentStages) {
-      if (replenishmentStage === stage.stage && elapsedHours >= stage.hours) {
-        set({
-          swipeStats: {
-            ...swipeStats,
-            remainingSwipes: swipeStats.remainingSwipes + stage.swipes,
-          },
-          replenishmentStage: stage.stage + 1,
-        });
-        toast.success(`You have received ${stage.swipes} new swipes!`)
-      }
-    }
-    if (replenishmentStage > 3) {
+    if (hoursPassed >= 24) {
       set({ outOfSwipesAt: null, replenishmentStage: 0 });
+      toast.success("Your swipes have been fully replenished!");
+    } else if (hoursPassed >= 12 && replenishmentStage < 2) {
+      set({ replenishmentStage: 2 });
+      toast.success("You have 25 more swipes!");
+    } else if (hoursPassed >= 6 && replenishmentStage < 1) {
+      set({ replenishmentStage: 1 });
+      toast.success("You have 10 more swipes!");
     }
   },
 }));

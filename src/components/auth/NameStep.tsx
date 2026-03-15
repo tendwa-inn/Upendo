@@ -5,7 +5,7 @@ import { User } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const NameStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [name, setName] = useState('');
 
   const handleNext = () => {
@@ -13,7 +13,7 @@ const NameStep: React.FC = () => {
       toast.error('Please enter a valid name');
       return;
     }
-    updateData({ name });
+    updateFormData({ name });
     nextStep();
   };
 

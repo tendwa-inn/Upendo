@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAdminStore } from '../../stores/adminStore';
 import { useThemeStore } from '../../stores/themeStore';
+import { User, Subscription } from '../../types';
 import { 
   Search, 
   Filter, 
@@ -70,7 +71,7 @@ const UserManagement: React.FC = () => {
     }
   };
 
-  const getSubscriptionColor = (subscription: string) => {
+  const getSubscriptionColor = (subscription?: Subscription) => {
     switch (subscription) {
       case 'vip': return 'bg-purple-100 text-purple-800';
       case 'pro': return 'bg-yellow-100 text-yellow-800';
@@ -250,7 +251,7 @@ const UserManagement: React.FC = () => {
                           {user.name}
                         </div>
                         <div className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>
-                          {user.age} years old
+                          {user.age.toString()} years old
                         </div>
                       </div>
                     </div>
@@ -270,7 +271,7 @@ const UserManagement: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-900'}`}>
-                      {new Date(user.dateOfBirth).toLocaleDateString()}
+                      -
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

@@ -5,7 +5,7 @@ import { MapPin } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const LocationStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [isLoading, setIsLoading] = useState(false);
 
   const handleLocation = () => {
@@ -14,7 +14,7 @@ const LocationStep: React.FC = () => {
       (position) => {
         const { latitude, longitude } = position.coords;
         // In a real app, you would use a reverse geocoding API to get the city
-        updateData({ location: { latitude, longitude, city: 'Lusaka' } });
+        updateFormData({ location: { latitude, longitude, city: 'Lusaka' } });
         toast.success('Location captured!');
         nextStep();
       },
@@ -26,7 +26,7 @@ const LocationStep: React.FC = () => {
   };
 
   const handleSkip = () => {
-    updateData({ location: { latitude: 40.7128, longitude: -74.0060, city: 'New York' } });
+    updateFormData({ location: { latitude: 40.7128, longitude: -74.0060, city: 'New York' } });
     toast.success('Location skipped. Using default.');
     nextStep();
   };

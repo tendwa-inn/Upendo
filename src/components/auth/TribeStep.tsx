@@ -8,11 +8,11 @@ const africanTribes = [
 ].sort();
 
 const TribeStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [tribe, setTribe] = useState('');
 
   const handleNext = () => {
-    updateData({ tribe });
+    updateFormData({ tribe });
     nextStep();
   };
 

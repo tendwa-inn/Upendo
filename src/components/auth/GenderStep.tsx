@@ -4,12 +4,12 @@ import { useSignUpStore } from '../../stores/signUpStore';
 import { User, Users } from 'lucide-react';
 
 const GenderStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [gender, setGender] = useState<'man' | 'woman'>('woman');
 
   const handleNext = () => {
     const lookingFor = gender === 'man' ? 'women' : 'men';
-    updateData({ gender, lookingFor });
+    updateFormData({ gender, lookingFor });
     nextStep();
   };
 

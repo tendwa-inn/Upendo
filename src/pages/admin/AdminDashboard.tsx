@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { useAdminStore } from '../../stores/adminStore';
+import { UserReport } from '../../types/admin';
 import { useThemeStore } from '../../stores/themeStore';
 import { 
   Users, 
@@ -34,14 +35,14 @@ const AdminDashboard: React.FC = () => {
     totalUsers: allUsers.length,
     freeUsers: allUsers.filter(user => user.subscription === 'free').length,
     proUsers: allUsers.filter(user => user.subscription === 'pro').length,
-    vipUsers: allUsers.filter(user => user.subscription === 'vip').length,
+    vipUsers: allUsers.filter(user => user.subscription === 'vip' || user.subscription === 'premium').length,
     pendingReports: reports.filter(r => r.status === 'pending').length,
     underReviewReports: reports.filter(r => r.status === 'under_review').length,
     activeMessages: systemMessages.filter(msg => msg.isActive).length,
     activeFilters: keywordFilters.filter(f => f.isActive).length,
   };
 
-  const StatCard = ({ title, value, icon: Icon, color }: any) => (
+  const StatCard = ({ title, value, icon: Icon, color }: { title: string, value: number, icon: React.ElementType, color: string }) => (
     <div className={`${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow p-6`}>
       <div className="flex items-center">
         <div className={`flex-shrink-0 p-3 rounded-lg ${color}`}>
@@ -59,7 +60,7 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 
-  const RecentReport = ({ report }: { report: any }) => (
+  const RecentReport = ({ report }: { report: UserReport }) => (
     <div className={`flex items-center justify-between p-4 ${isDark ? 'bg-gray-800' : 'bg-white'} rounded-lg shadow`}>
       <div className="flex items-center">
         <div className={`p-2 rounded-full ${

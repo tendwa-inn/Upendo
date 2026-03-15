@@ -10,17 +10,33 @@ import PhotoUploadStep from '../components/auth/PhotoUploadStep';
 import InterestsStep from '../components/auth/InterestsStep';
 import LocationStep from '../components/auth/LocationStep';
 import WelcomeStep from '../components/auth/WelcomeStep';
+import PhoneStep from '../components/auth/PhoneStep';
+import OtpStep from '../components/auth/OtpStep';
+import { useAuthStore } from '../stores/authStore';
 
 const SignUpPage: React.FC = () => {
-  const { step, nextStep, updateData, formData } = useSignUpStore();
+  const { step, nextStep, updateFormData, formData } = useSignUpStore();
+  const { signUp, isLoading } = useAuthStore();
 
-  const validateAge = () => {
-    const age = new Date().getFullYear() - new Date(formData.dateOfBirth).getFullYear();
-    if (age < 18 || age > 60) {
-      alert('You must be between 18 and 60 to sign up.');
-      return false;
+  const handlePhoneSubmit = async (phone: string) => {
+    updateFormData({ phone });
+    try {
+      await sendOtp(phone);
+      nextStep();
+    } catch (error) {
+      alert('Failed to send OTP. Please try again.');
     }
-    return true;
+  };
+  
+  const handleOtpSubmit = async (otp: string) => {
+    try {
+      await verifyOtp(formData.phone, otp);
+      // After OTP verification, create the user profile
+      await signUp(formData);
+      nextStep();
+    } catch (error) {
+      alert('Sign up failed. Please try again.');
+    }
   };
 
   const renderStep = () => {
@@ -30,7 +46,7 @@ const SignUpPage: React.FC = () => {
       case 2:
         return <NameStep />;
       case 3:
-          return <DobStep />;
+        return <DobStep />;
       case 4:
         return <GenderStep />;
       case 5:
@@ -38,13 +54,17 @@ const SignUpPage: React.FC = () => {
       case 6:
         return <PurposeStep />;
       case 7:
-        return <InterestsStep onNext={(interests) => { updateData({ interests }); nextStep(); }} />;
+        return <InterestsStep onNext={(interests) => { updateFormData({ interests }); nextStep(); }} />;
       case 8:
         return <PhotoUploadStep />;
       case 9:
+        return <PhoneStep onNext={handlePhoneSubmit} />;
+      case 10:
+        return <OtpStep onNext={handleOtpSubmit} />;
+      case 11:
         return <WelcomeStep />;
       default:
-        return <LocationStep />; 
+        return <LocationStep />;
     }
   };
 
@@ -56,7 +76,7 @@ const SignUpPage: React.FC = () => {
         transition={{ duration: 0.6 }}
         className="w-full max-w-md bg-white/10 backdrop-blur-lg rounded-3xl p-8 space-y-6"
       >
-        {renderStep()}
+        {isLoading ? <p>Loading...</p> : renderStep()}
       </motion.div>
     </div>
   );

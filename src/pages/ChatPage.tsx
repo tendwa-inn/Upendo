@@ -2,38 +2,22 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useMatchStore } from '../stores/matchStore';
 import { Settings, SlidersHorizontal, Check } from 'lucide-react';
-import { Match, User } from '../types';
+import { Match } from '../types';
 import ChatConversation from '../components/chat/ChatConversation';
-import { mockUsers } from '../data/mockData';
 import { useAuthStore } from '../stores/authStore';
 import { useThemeStore } from '../stores/themeStore';
 import SafeImage from '../components/common/SafeImage';
 
 const ChatPage: React.FC = () => {
-  const { matches, selectedMatch, selectMatch, createMatch, addMessage } = useMatchStore();
+  const { matches, selectedMatch, selectMatch, fetchMatches } = useMatchStore();
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
 
   useEffect(() => {
     if (user) {
-      const upendoAssistant = mockUsers.find(u => u.id === 'upendo-assistant');
-      const hasMatchWithUpendo = matches.some(m => m.user2.id === 'upendo-assistant');
-
-      if (upendoAssistant && !hasMatchWithUpendo) {
-        const currentUser = mockUsers.find(u => u.id === 'current-user') || mockUsers[0];
-        const newMatch = createMatch(currentUser, upendoAssistant);
-        addMessage(newMatch.id, {
-          id: `msg-${Date.now()}`,
-          matchId: newMatch.id,
-          senderId: upendoAssistant.id,
-          content: `Welcome to Upendo! I'm here to help you get started. A complete profile gets more attention. Why not start by filling out your Details, Delicacies, and Travel sections? Let's make your profile shine! ✨`,
-          timestamp: new Date(),
-          isRead: false,
-          type: 'text',
-        });
-      }
+      fetchMatches();
     }
-  }, [user, matches, createMatch, addMessage]);
+  }, [user, fetchMatches]);
 
   return (
     <div className="h-screen flex flex-col text-white bg-stone-900">

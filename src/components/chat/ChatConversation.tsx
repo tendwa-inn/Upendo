@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Send, Camera, Phone, Video, Heart, ArrowLeft, MoreVertical, Plus, Smile, UserX, ShieldX, Flag, Check } from 'lucide-react';
 import { Match, Message } from '../../types';
+import { UserReport } from '../../types/admin';
 import { useMatchStore } from '../../stores/matchStore';
-import { mockMessages } from '../../data/mockData';
 import SafeImage from '../common/SafeImage';
 import { useAuthStore } from '../../stores/authStore';
 import { useAdminStore } from '../../stores/adminStore';
@@ -42,7 +42,7 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
   const otherUser = match.user1.id === currentUser?.id ? match.user2 : match.user1;
   
   const [message, setMessage] = useState('');
-  const [messages, setMessages] = useState<Message[]>(mockMessages[match.id] || []);
+  const [messages, setMessages] = useState<Message[]>(match.messages || []);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isReportModalOpen, setIsReportModalOpen] = useState(false);
@@ -129,7 +129,17 @@ const ChatConversation: React.FC<ChatConversationProps> = ({ match }) => {
 
   const handleReportSubmit = (reason: string, details: string) => {
     if (currentUser) {
-      submitReport(currentUser.id, otherUser.id, reason, details);
+      const report: UserReport = {
+        id: `report-${Date.now()}`,
+        reportedUserId: otherUser.id,
+        reportedBy: currentUser.id,
+        reason: reason as any,
+        description: details,
+        status: 'pending',
+        priority: 'medium',
+        createdAt: new Date(),
+      };
+      submitReport(report);
       setIsReportModalOpen(false);
       setIsMenuOpen(false);
       alert('Report submitted. Thank you for your feedback.');

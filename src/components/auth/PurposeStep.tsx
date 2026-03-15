@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 const purposes = ['Friendship', 'Dating', 'Hookups', 'Serious Relationship'];
 
 const PurposeStep: React.FC = () => {
-  const { nextStep, updateData } = useSignUpStore();
+  const { nextStep, updateFormData } = useSignUpStore();
   const [selectedPurposes, setSelectedPurposes] = useState<string[]>([]);
 
   const togglePurpose = (purpose: string) => {
@@ -23,7 +23,7 @@ const PurposeStep: React.FC = () => {
       toast.error('Please select at least one option');
       return;
     }
-    updateData({ hereFor: selectedPurposes as any });
+    updateFormData({ hereFor: selectedPurposes as any });
     nextStep();
   };
 

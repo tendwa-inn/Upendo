@@ -8,41 +8,38 @@ import toast from 'react-hot-toast';
 import { User, AuthUser } from '../../types';
 
 const WelcomeStep: React.FC = () => {
-  const { data } = useSignUpStore();
+  const { formData } = useSignUpStore();
   const { signUp } = useAuthStore();
 
   const handleStart = async () => {
     try {
       const newUser: User = {
         id: `user-${Date.now()}`,
-        name: data.name || 'Zarah',
-        age: data.age || 25,
-        dateOfBirth: data.dateOfBirth || new Date(),
-        gender: data.gender || 'woman',
-        lookingFor: data.lookingFor || 'men',
-        tribe: data.tribe || 'Bemba',
-        hereFor: data.hereFor || ['Dating'],
-        interests: data.interests || ['Hiking', 'Reading'],
-        bio: data.bio || 'Lover of nature and good books.',
-        photos: data.photos || [],
-        location: data.location || { latitude: -15.4167, longitude: 28.2833, city: 'Lusaka' },
+        name: formData.name || 'Zarah',
+        age: formData.age || 25,
+        dateOfBirth: formData.dateOfBirth || new Date(),
+        gender: formData.gender || 'woman',
+        lookingFor: formData.lookingFor || 'men',
+        tribe: formData.tribe || 'Bemba',
+        hereFor: formData.hereFor || ['Dating'],
+        interests: formData.interests || ['Hiking', 'Reading'],
+        bio: formData.bio || 'Lover of nature and good books.',
+        photos: formData.photos || [],
+        location: formData.location || { latitude: -15.4167, longitude: 28.2833, city: 'Lusaka' },
         subscription: 'free',
         isVerified: false,
-        lastActive: new Date(),
         online: true,
         preferences: {
           ageRange: [18, 55],
           distance: 50,
-          gender: 'all',
         },
         aboutMe: {},
+        email: `${(formData.name || 'zarah').toLowerCase().replace(/\s/g, '.')}@upendo.com`,
       };
 
       const newAuthUser: AuthUser = {
-        id: newUser.id,
-        email: `${newUser.name.toLowerCase().replace(/\s/g, '.')}@upendo.com`,
-        subscription: 'free',
-        isVerified: false,
+        ...newUser,
+        email: newUser.email,
       };
 
       await signUp(newAuthUser);
@@ -62,7 +59,7 @@ const WelcomeStep: React.FC = () => {
         <PartyPopper className="w-10 h-10 text-white" />
       </motion.div>
 
-      <h2 className="text-2xl font-bold text-white mb-3">Welcome, {data.name}!</h2>
+      <h2 className="text-2xl font-bold text-white mb-3">Welcome, {formData.name}!</h2>
       <p className="text-white/80 mb-8">
         You're all set! Get ready to find your perfect match.
       </p>

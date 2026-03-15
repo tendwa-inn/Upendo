@@ -1,68 +1,49 @@
 import { create } from 'zustand';
+import { User, Story } from '../types';
 import { AdminUser, UserReport, SystemMessage, KeywordFilter, EscalationTicket, ModerationAction } from '../types/admin';
-import { User } from '../types';
-import { useMatchStore } from './matchStore'; // Import match store
-import { useDiscoverStore } from './discoverStore'; // Import discover store
-import { mockUsers } from '../data/mockData'; // Import mockUsers
+import { useMatchStore } from './matchStore'; 
+import { useDiscoverStore } from './discoverStore'; 
+import { mockUsers } from '../data/mockData'; 
+
+
 
 interface AdminState {
-  // Admin authentication
   currentAdmin: AdminUser | null;
   isAuthenticated: boolean;
-  
-  // User management
   allUsers: User[];
   filteredUsers: User[];
   userFilter: {
-    subscription: 'all' | 'free' | 'pro' | 'vip';
+    subscription: 'all' | 'free' | 'pro' | 'vip' | 'premium' | 'admin';
     status: 'all' | 'active' | 'suspended' | 'blocked';
     search: string;
   };
-  
-  // Reports and moderation
   reports: UserReport[];
   moderationActions: ModerationAction[];
   escalationTickets: EscalationTicket[];
-  
-  // System messages
   systemMessages: SystemMessage[];
-  
-  // Keyword filtering
   keywordFilters: KeywordFilter[];
-  
-  // Actions
   login: (email: string, password: string) => Promise<boolean>;
   logout: () => void;
-  
-  // User management
   fetchAllUsers: () => Promise<void>;
   filterUsers: () => void;
   setUserFilter: (filter: Partial<AdminState['userFilter']>) => void;
   deleteUser: (userId: string) => Promise<void>;
   suspendUser: (userId: string, duration: number, reason: string) => Promise<void>;
   blockUser: (userId: string, reason: string) => Promise<void>;
-  
-  // Reports
   fetchReports: () => Promise<void>;
   assignReport: (reportId: string, adminId: string) => Promise<void>;
   resolveReport: (reportId: string, action: ModerationAction) => Promise<void>;
-  
-  // Escalation
   escalateToAdmin: (reportId: string, reason: string) => Promise<void>;
   resolveEscalation: (escalationId: string, resolution: string) => Promise<void>;
-  
-  // System messages
   createSystemMessage: (message: Omit<SystemMessage, 'id' | 'createdAt' | 'createdBy'>) => Promise<void>;
   updateSystemMessage: (messageId: string, updates: Partial<SystemMessage>) => Promise<void>;
   deleteSystemMessage: (messageId: string) => Promise<void>;
-  
-  // Keyword filtering
   addKeywordFilter: (keyword: string, category: string, severity: string, autoAction: string) => Promise<void>;
   updateKeywordFilter: (filterId: string, updates: Partial<KeywordFilter>) => Promise<void>;
   deleteKeywordFilter: (filterId: string) => Promise<void>;
+  submitReport: (report: UserReport) => Promise<void>;
 }
 
-// Mock admin users
 const mockAdmins: AdminUser[] = [
   {
     id: 'admin-1',
@@ -86,7 +67,6 @@ const mockAdmins: AdminUser[] = [
   },
 ];
 
-// Mock data
 const mockReports: UserReport[] = [
   {
     id: 'report-1',
@@ -153,7 +133,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   keywordFilters: mockKeywordFilters,
 
   login: async (email: string, password: string) => {
-    // Mock authentication
     const admin = mockAdmins.find(a => a.email === email && password === 'admin123');
     if (admin) {
       set({ currentAdmin: admin, isAuthenticated: true });
@@ -167,7 +146,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   fetchAllUsers: async () => {
-    // Mock fetch - in real app this would be an API call
     const { mockUsers } = await import('../data/mockData');
     set({ allUsers: mockUsers });
     get().filterUsers();
@@ -198,7 +176,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   deleteUser: async (userId: string) => {
-    // Mock delete - in real app this would be an API call
     set(state => ({
       allUsers: state.allUsers.filter(user => user.id !== userId),
     }));
@@ -206,7 +183,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   suspendUser: async (userId: string, duration: number, reason: string) => {
-    // Mock suspend - in real app this would be an API call
     const action: ModerationAction = {
       id: `action-${Date.now()}`,
       reportId: '',
@@ -225,7 +201,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   blockUser: async (userId: string, reason: string) => {
-    // Mock block - in real app this would be an API call
     const action: ModerationAction = {
       id: `action-${Date.now()}`,
       reportId: '',
@@ -242,7 +217,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
   },
 
   fetchReports: async () => {
-    // Mock fetch - reports are already in state
     console.log('Fetching reports...');
   },
 
@@ -268,7 +242,7 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
       id: `escalation-${Date.now()}`,
       originalReportId: reportId,
       escalatedBy: get().currentAdmin?.id || '',
-      escalatedTo: 'admin-1', // Default to super admin
+      escalatedTo: 'admin-1',
       reason,
       status: 'pending',
       priority: 'high',
@@ -306,7 +280,6 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
       systemMessages: [...state.systemMessages, newMessage],
     }));
 
-    // Send message from Upendo assistant
     const upendoAssistant = mockUsers.find(u => u.id === 'upendo-assistant');
     if (!upendoAssistant) return;
 
@@ -319,14 +292,12 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
       mockUsers.filter(u => u.subscription === message.targetAudience && u.id !== 'upendo-assistant');
 
     if (message.deliveryMethod === 'story' || message.deliveryMethod === 'both') {
-      addStory({
-        user: upendoAssistant,
-        type: 'text',
-        content: newMessage.content,
-        duration: 5000,
+      const newStory: Omit<Story, "id"> = {
+        userId: upendoAssistant.id,
+        imageUrl: '', 
         createdAt: new Date(),
-        viewedBy: [],
-      });
+      };
+      addStory(newStory);
     }
 
     for (const user of targetUsers) {
@@ -354,19 +325,9 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
     }
   },
 
-  submitReport: (reporterId: string, reportedUserId: string, reason: string, details: string) => {
-    const newReport: UserReport = {
-      id: `report-${Date.now()}`,
-      reportedUserId,
-      reportedBy: reporterId,
-      reason,
-      description: details,
-      status: 'pending',
-      priority: 'medium',
-      createdAt: new Date(),
-    };
+  submitReport: async (report: UserReport) => {
     set(state => ({
-      reports: [newReport, ...state.reports],
+      reports: [report, ...state.reports],
     }));
   },
 
@@ -388,9 +349,9 @@ export const useAdminStore = create<AdminState>()((set, get) => ({
     const newFilter: KeywordFilter = {
       id: `filter-${Date.now()}`,
       keyword,
-      category: category as any,
-      severity: severity as any,
-      autoAction: autoAction as any,
+      category: category as KeywordFilter['category'],
+      severity: severity as KeywordFilter['severity'],
+      autoAction: autoAction as KeywordFilter['autoAction'],
       isActive: true,
       createdBy: get().currentAdmin?.id || '',
       createdAt: new Date(),

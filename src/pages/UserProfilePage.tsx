@@ -13,16 +13,13 @@ import ReportUserModal from '../components/modals/ReportUserModal';
 const UserProfilePage: React.FC = () => {
   const { userId } = useParams<{ userId: string }>();
   const { theme } = useThemeStore();
-  const { user: currentUser, useMessageRequest } = useAuthStore();
-  const { submitReport } = useAdminStore();
+  const { user: currentUser } = useAuthStore();
   const { createMatch, matches, selectMatch } = useMatchStore();
   const navigate = useNavigate();
   const location = useLocation();
   const user = location.state?.user || mockUsers.find((u) => u.id === userId);
   const [isViewerOpen, setIsViewerOpen] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   if (!user) {
     return <div className="p-4 text-center">User not found</div>;
@@ -33,26 +30,8 @@ const UserProfilePage: React.FC = () => {
     setIsViewerOpen(true);
   };
 
-  const handleReportSubmit = (reason: string, details: string) => {
-    if (currentUser) {
-      submitReport(currentUser.id, user.id, reason, details);
-      setIsReportModalOpen(false);
-      // In a real app, you'd show a toast notification here
-      alert('Report submitted. Thank you for your feedback.');
-    }
-  };
-
   const handleMessage = () => {
     if (!currentUser || !user) return;
-
-    if (currentUser.subscription === 'free') {
-      if (useMessageRequest()) {
-        // Proceed with messaging
-      } else {
-        alert('You have no message requests left this week. Upgrade to send more!');
-        return;
-      }
-    }
 
     const existingMatch = matches.find(
       m => (m.user1.id === currentUser.id && m.user2.id === user.id) || (m.user1.id === user.id && m.user2.id === currentUser.id)
@@ -76,23 +55,6 @@ const UserProfilePage: React.FC = () => {
         <Link to="/find" className={`p-2 rounded-full ${isDark ? 'bg-gray-800/50 text-white' : 'bg-black/20 text-white'} backdrop-blur-md`}>
           <ArrowLeft className="w-6 h-6" />
         </Link>
-        <div className="relative">
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className={`p-2 rounded-full ${isDark ? 'bg-gray-800/50 text-white' : 'bg-black/20 text-white'} backdrop-blur-md`}>
-            <MoreVertical className="w-6 h-6" />
-          </button>
-          {isMenuOpen && (
-            <div className={`absolute right-0 mt-2 w-48 rounded-md shadow-lg ${isDark ? 'bg-gray-800' : 'bg-white'} ring-1 ring-black ring-opacity-5`}>
-              <div className="py-1">
-                <button onClick={() => { setIsReportModalOpen(true); setIsMenuOpen(false); }} className={`w-full text-left flex items-center px-4 py-2 text-sm ${isDark ? 'text-gray-300 hover:bg-gray-700' : 'text-gray-700 hover:bg-gray-100'}`}>
-                  <Flag className="w-4 h-4 mr-2" /> Report
-                </button>
-                <button className={`w-full text-left flex items-center px-4 py-2 text-sm ${isDark ? 'text-red-400 hover:bg-gray-700' : 'text-red-600 hover:bg-gray-100'}`}>
-                  <Ban className="w-4 h-4 mr-2" /> Block
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Profile Content */}
@@ -165,11 +127,9 @@ const UserProfilePage: React.FC = () => {
             <Heart className="w-5 h-5 inline mr-2" />
             Send Like
           </button>
-          {(!user.canMessage && currentUser?.subscription === 'free') ? null : (
-            <button onClick={handleMessage} className={`flex-1 py-3 rounded-full font-semibold border-2 ${isDark ? 'border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white' : 'border-white text-white hover:bg-white hover:text-purple-600'}`}>
+          <button onClick={handleMessage} className={`flex-1 py-3 rounded-full font-semibold border-2 ${isDark ? 'border-purple-600 text-purple-400 hover:bg-purple-600 hover:text-white' : 'border-white text-white hover:bg-white hover:text-purple-600'}`}>
               Message
-            </button>
-          )}
+          </button>
         </div>
       </div>
 
@@ -180,12 +140,6 @@ const UserProfilePage: React.FC = () => {
           onClose={() => setIsViewerOpen(false)}
         />
       )}
-
-      <ReportUserModal 
-        isOpen={isReportModalOpen}
-        onClose={() => setIsReportModalOpen(false)}
-        onSubmit={handleReportSubmit}
-      />
     </div>
   );
 };

@@ -1,106 +1,100 @@
 import { create } from 'zustand';
-import { Match, Message, User } from '../types';
+import { supabase } from '../lib/supabaseClient';
+import { Match, User, Message } from '../types';
+import { useAuthStore } from './authStore';
 
 interface MatchState {
   matches: Match[];
   selectedMatch: Match | null;
-  messages: Record<string, Message[]>; // matchId -> messages
-  isLoading: boolean;
-  userLikes: Record<string, Set<string>>; // Simulating a backend table of likes
-
-  // Actions
-  setMatches: (matches: Match[]) => void;
-  addMatch: (match: Match) => void;
-  createMatch: (user1: User, user2: User) => Match;
+  fetchMatches: () => Promise<void>;
+  createMatch: (user2Id: string) => Promise<Match | null>;
   selectMatch: (match: Match | null) => void;
-  addMessage: (matchId: string, message: Message) => void;
-  setMessages: (matchId: string, messages: Message[]) => void;
-  markAsRead: (matchId: string, messageId: string) => void;
-  unmatch: (matchId: string) => void;
-  checkMatch: (currentUser: User, swipedUser: User) => boolean;
+  addMessage: (matchId: string, content: string, type: 'text' | 'image' | 'gif') => Promise<void>;
+  unmatch: (matchId: string) => Promise<void>;
 }
 
 export const useMatchStore = create<MatchState>((set, get) => ({
   matches: [],
   selectedMatch: null,
-  messages: {},
-  isLoading: false,
-  userLikes: {
-    // Simulate that some users have liked the current user
-    'user-2': new Set(['current-user']),
-    'user-4': new Set(['current-user']),
-    'user-5': new Set(['current-user']),
-  },
 
-  setMatches: (matches) => {
-    set({ matches });
-  },
+  fetchMatches: async () => {
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return;
 
-  addMatch: (match) => {
-    set((state) => ({
-      matches: [match, ...state.matches],
-    }));
-  },
+    const { data, error } = await supabase
+      .from('matches')
+      .select('*, user1:profiles!user1_id(*), user2:profiles!user2_id(*), messages:messages(*)')
+      .or(`user1_id.eq.${currentUser.id},user2_id.eq.${currentUser.id}`);
 
-  unmatch: (matchId) => {
-    set((state) => ({
-      matches: state.matches.filter((match) => match.id !== matchId),
-      selectedMatch: state.selectedMatch?.id === matchId ? null : state.selectedMatch,
-    }));
-  },
-
-  createMatch: (user1, user2) => {
-    const newMatch: Match = {
-      id: `match-${Date.now()}`,
-      user1,
-      user2,
-      timestamp: new Date(),
-      lastMessage: null,
-    };
-    get().addMatch(newMatch);
-    return newMatch;
-  },
-
-  checkMatch: (currentUser, swipedUser) => {
-    const { userLikes } = get();
-    const doesSwipedUserLikeCurrentUser = userLikes[swipedUser.id]?.has(currentUser.id);
-    if (doesSwipedUserLikeCurrentUser) {
-      get().createMatch(currentUser, swipedUser);
-      return true;
+    if (error) {
+      console.error('Error fetching matches:', error);
+      return;
     }
-    return false;
+    set({ matches: data });
+  },
+
+  createMatch: async (user2Id) => {
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return null;
+
+    const { data, error } = await supabase
+      .from('matches')
+      .insert({ user1_id: currentUser.id, user2_id: user2Id })
+      .select('*, user1:profiles!user1_id(*), user2:profiles!user2_id(*), messages:messages(*)')
+      .single();
+
+    if (error) {
+      console.error('Error creating match:', error);
+      return null;
+    }
+    if (data) {
+      set((state) => ({ matches: [data, ...state.matches] }));
+      return data;
+    }
+    return null;
   },
 
   selectMatch: (match) => {
     set({ selectedMatch: match });
   },
 
-  addMessage: (matchId, message) => {
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [matchId]: [...(state.messages[matchId] || []), message],
-      },
-    }));
+  addMessage: async (matchId, content, type) => {
+    const currentUser = useAuthStore.getState().user;
+    if (!currentUser) return;
+
+    const { data, error } = await supabase
+      .from('messages')
+      .insert({ match_id: matchId, sender_id: currentUser.id, content, type })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error adding message:', error);
+      return;
+    }
+    if (data) {
+      set((state) => ({
+        matches: state.matches.map((match) =>
+          match.id === matchId
+            ? { ...match, messages: [...match.messages, data], lastMessage: data }
+            : match
+        ),
+        selectedMatch: state.selectedMatch?.id === matchId
+          ? { ...state.selectedMatch, messages: [...state.selectedMatch.messages, data], lastMessage: data }
+          : state.selectedMatch,
+      }));
+    }
   },
 
-  setMessages: (matchId, messages) => {
+  unmatch: async (matchId) => {
+    const { error } = await supabase.from('matches').delete().eq('id', matchId);
+    if (error) {
+      console.error('Error unmatching:', error);
+      return;
+    }
     set((state) => ({
-      messages: {
-        ...state.messages,
-        [matchId]: messages,
-      },
-    }));
-  },
-
-  markAsRead: (matchId, messageId) => {
-    set((state) => ({
-      messages: {
-        ...state.messages,
-        [matchId]: state.messages[matchId]?.map((msg) =>
-          msg.id === messageId ? { ...msg, isRead: true } : msg
-        ) || [],
-      },
+      matches: state.matches.filter((match) => match.id !== matchId),
+      selectedMatch: state.selectedMatch?.id === matchId ? null : state.selectedMatch,
     }));
   },
 }));

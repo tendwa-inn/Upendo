@@ -2,11 +2,14 @@
  * local server entry file, for local development
  */
 import app from './app.js';
+import sendOtp from './send-otp';
+
+app.post('/api/send-otp', sendOtp);
 
 /**
  * start server with port
  */
-const PORT = process.env.PORT || 3002;
+const PORT = process.env.PORT || 3004;
 
 const server = app.listen(PORT, () => {
   console.log(`Server ready on port ${PORT}`);
