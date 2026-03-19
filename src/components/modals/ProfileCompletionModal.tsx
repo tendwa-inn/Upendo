@@ -79,6 +79,7 @@ const ProfileCompletionModal = ({ onClose }) => {
   const [answers, setAnswers] = useState({});
   const [searchTerm, setSearchTerm] = useState('');
   const [localOccupations, setLocalOccupations] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setSearchTerm('');
@@ -119,12 +120,20 @@ const ProfileCompletionModal = ({ onClose }) => {
     return prevIndex;
   };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     const nextIndex = getNextQuestionIndex(currentQuestionIndex, answers);
     if (nextIndex < questions.length) {
       setCurrentQuestionIndex(nextIndex);
     } else {
-      onClose(answers);
+      setIsLoading(true);
+      try {
+        await onClose(answers);
+      } catch (error) {
+        console.error('Error saving profile:', error);
+        // Error is already handled in updateUserProfile function
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
@@ -276,9 +285,10 @@ const ProfileCompletionModal = ({ onClose }) => {
           </div>
           <button 
             onClick={handleNext} 
-            className="px-5 py-2 bg-pink-600 rounded-lg font-semibold transition-colors hover:bg-pink-700"
+            disabled={isLoading}
+            className="px-5 py-2 bg-pink-600 rounded-lg font-semibold transition-colors hover:bg-pink-700 disabled:bg-pink-800 disabled:cursor-not-allowed"
           >
-            {isLastQuestion ? 'Finish' : 'Next'}
+            {isLoading ? 'Saving...' : (isLastQuestion ? 'Finish' : 'Next')}
           </button>
         </div>
       </motion.div>

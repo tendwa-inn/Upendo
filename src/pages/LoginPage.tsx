@@ -11,7 +11,7 @@ const LoginPage: React.FC = () => {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isAdminLogin, setIsAdminLogin] = useState(false);
-  const { login: userLogin } = useAuthStore();
+  const { login: userLogin, signInWithGoogle } = useAuthStore();
   const { login: adminLogin } = useAdminStore();
   const navigate = useNavigate();
 
@@ -147,22 +147,44 @@ const LoginPage: React.FC = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 1 }}
-          className="text-center mt-6"
+          className="mt-6 space-y-4"
         >
-          <p className="text-white/70 text-sm">
-            {isAdminLogin ? 'Not an admin?' : "Don't have an account?"}{' '}
-            <button onClick={() => setIsAdminLogin(!isAdminLogin)} className="text-white font-medium hover:underline">
-              {isAdminLogin ? 'User Login' : 'Admin Login'}
-            </button>
-          </p>
           {!isAdminLogin && (
-            <p className="text-white/70 text-sm mt-2">
-              Don't have an account?{' '}
-              <Link to="/signup" className="text-white font-medium hover:underline">
-                Sign up
-              </Link>
-            </p>
+            <>
+              <div className="flex items-center justify-center space-x-2">
+                <div className="flex-grow h-px bg-white/20"></div>
+                <span className="text-white/60 text-sm">OR</span>
+                <div className="flex-grow h-px bg-white/20"></div>
+              </div>
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                 onClick={signInWithGoogle}
+                 className="w-full flex items-center justify-center gap-2 bg-white/20 text-white font-bold py-3 rounded-2xl transition-all duration-300 hover:bg-white/30"
+               >
+                <img src="/google-logo.svg" alt="Google" className="w-5 h-5" />
+                Continue with Google
+              </motion.button>
+            </>
           )}
+
+          <div className="text-center">
+            <p className="text-white/70 text-sm">
+              {isAdminLogin ? 'Not an admin?' : "Don't have an account?"}{' '}
+              <button onClick={() => setIsAdminLogin(!isAdminLogin)} className="text-white font-medium hover:underline">
+                {isAdminLogin ? 'User Login' : 'Admin Login'}
+              </button>
+            </p>
+            {!isAdminLogin && (
+              <p className="text-white/70 text-sm mt-2">
+                Don't have an account?{' '}
+                <Link to="/signup" className="text-white font-medium hover:underline">
+                  Sign up
+                </Link>
+              </p>
+            )}
+          </div>
         </motion.div>
       </motion.div>
     </div>

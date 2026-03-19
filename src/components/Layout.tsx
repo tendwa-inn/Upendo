@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, MessageCircle, User, Compass } from 'lucide-react';
+import { Heart, MessageCircle, User, Compass, LogOut } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 import { useThemeStore } from '../stores/themeStore';
@@ -10,13 +10,14 @@ interface LayoutProps {
 }
 
 import { useAuthStore } from '../stores/authStore';
-import { useMatchStore } from '../stores/matchStore';
+import { useUiStore } from '../stores/uiStore';
+import ProfileCompletionModal from './modals/ProfileCompletionModal';
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation();
   const { user } = useAuthStore();
   const { theme } = useThemeStore();
-  const { selectedMatch } = useMatchStore();
+  const { isProfileCompletionModalOpen, closeProfileCompletionModal } = useUiStore();
   const isFindPage = location.pathname === '/find';
 
   const getNavColors = () => {
@@ -63,8 +64,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     },
   ];
 
+  const getThemeClass = () => {
+    if (user?.subscription === 'vip') {
+      return 'gradient-vip';
+    }
+    return theme === 'dark' ? 'gradient-pro' : 'gradient-romantic';
+  };
+
   return (
-    <div className="relative min-h-screen">
+    <div className={`relative min-h-screen ${getThemeClass()}`}>
       {/* Background */}
       <div className="absolute inset-0 bg-stone-900" />
       <div
@@ -85,10 +93,14 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           {children}
         </main>
 
+        {isProfileCompletionModalOpen && (
+          <ProfileCompletionModal onClose={closeProfileCompletionModal} />
+        )}
+
         {/* Bottom Navigation */}
-        {!selectedMatch && (
+        {!isProfileCompletionModalOpen && (
         <nav className={cn(
-          "fixed bottom-0 left-0 right-0 pb-safe-area-bottom",
+          "fixed bottom-0 left-0 right-0 pb-safe-area-bottom z-50",
           "bg-transparent",
           "border-transparent"
         )}>

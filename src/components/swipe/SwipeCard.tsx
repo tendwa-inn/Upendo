@@ -50,10 +50,14 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
     }
   };
 
-  const nextPhoto = () => setCurrentPhotoIndex(prev => Math.min(prev + 1, user.photos.length - 1));
+  const nextPhoto = () => {
+    if (user.photos && user.photos.length > 0) {
+      setCurrentPhotoIndex(prev => Math.min(prev + 1, user.photos.length - 1));
+    }
+  };
   const prevPhoto = () => setCurrentPhotoIndex(prev => Math.max(prev - 1, 0));
 
-  const mutualInterests = (currentUser?.interests || []).filter(interest => user.interests.includes(interest));
+  const mutualInterests = (currentUser?.interests || []).filter(interest => (user.interests || []).includes(interest));
 
   if (!isActive) return null;
 
@@ -233,8 +237,8 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
 
         <motion.img
           key={currentPhotoIndex}
-          src={user.photos[currentPhotoIndex] || 'https://via.placeholder.com/600x800'}
-          alt={user.name}
+          src={(user.photos && user.photos[currentPhotoIndex]) || 'https://via.placeholder.com/600x800'}
+          alt={user.name || 'User'}
           className="w-full h-full object-cover"
           initial={{ opacity: 0.8 }}
           animate={{ opacity: 1 }}
@@ -246,10 +250,10 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
 
         <div className="absolute bottom-28 left-0 right-0 p-5 pr-24 text-white z-10">
           <div className="mb-4">
-            <h2 className="text-3xl font-bold cursor-pointer" onClick={() => navigate(`/user/${user.id}`)}>{user.name}, {user.age}</h2>
+            <h2 className="text-3xl font-bold cursor-pointer" onClick={() => navigate(`/user/${user.id}`)}>{user.name || 'User'}, {user.age || ''}</h2>
             <div className="text-gray-300 mt-1">
-              <p className={`text-white mt-2 text-base ${!isBioExpanded && 'line-clamp-2'}`}>{user.bio}</p>
-              {user.bio.length > 100 && (
+              <p className={`text-white mt-2 text-base ${!isBioExpanded && 'line-clamp-2'}`}>{user.bio || ''}</p>
+              {user.bio && user.bio.length > 100 && (
                 <button onClick={() => setIsBioExpanded(!isBioExpanded)} className="text-gray-400 text-sm font-semibold mt-1 hover:underline">
                   {isBioExpanded ? 'See less' : 'See more'}
                 </button>

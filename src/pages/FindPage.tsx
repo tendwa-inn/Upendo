@@ -11,7 +11,7 @@ import FilterModal from '../components/modals/FilterModal';
 import { SlidersHorizontal, Bell } from 'lucide-react';
 import { mockUsers } from '../data/mockData';
 import { Link } from 'react-router-dom';
-import toast from 'react-hot-toast';
+import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
 
 const FindPage: React.FC = () => {
   const {
@@ -124,6 +124,16 @@ const FindPage: React.FC = () => {
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">Loading...</div>;
+  }
+
+  if (!currentUser?.photos || currentUser.photos.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">
+        <h2 className="text-2xl font-bold mb-4">Upload Photos to Continue</h2>
+        <p className="mb-8">You need to upload at least one photo to start seeing matches.</p>
+        <ProfilePhotoUploader />
+      </div>
+    );
   }
 
   const handleApplyFilters = (newFilters: any) => setFilters(newFilters);

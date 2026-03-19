@@ -10,31 +10,80 @@ import toast from 'react-hot-toast';
 import { subscriptionConfig } from '../data/mockData';
 import ProfileCompletionModal from '../components/modals/ProfileCompletionModal';
 
-const ProfilePage: React.FC = () => {
-  const { user, logout } = useAuthStore();
-  const { currentUser, updateCurrentUser } = useProfileStore();
-  const { theme, toggleTheme } = useThemeStore();
-  const { lastActivity } = useSwipeStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [bio, setBio] = useState(user?.bio || '');
-  const [age, setAge] = useState(user?.age || 0);
-  const [location, setLocation] = useState(user?.location?.city || '');
-  const [occupation, setOccupation] = useState(user?.occupation || '');
-  const [education, setEducation] = useState(user?.education || '');
-  const [drinking, setDrinking] = useState(user?.drinking || '');
-  const [smoking, setSmoking] = useState(user?.smoking || '');
-  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
 
-  if (!user) {
-    return <div>Loading...</div>;
+const ProfilePage: React.FC = () => {
+  const { user, profile, signOut } = useAuthStore();
+  const { lastActivity } = useSwipeStore();
+  const { theme, toggleTheme } = useThemeStore();
+  const [isEditing, setIsEditing] = useState(false);
+
+  // Local state for inline editing, initialized from the PROFILE object with fallbacks.
+  const [bio, setBio] = useState(profile?.bio ?? '');
+  const [occupation, setOccupation] = useState(profile?.occupation ?? '');
+  const [location, setLocation] = useState(profile?.location?.name ?? '');
+  const [loveLanguage, setLoveLanguage] = useState(profile?.loveLanguage ?? '');
+  const [education, setEducation] = useState(profile?.education ?? '');
+  const [height, setHeight] = useState(profile?.height ?? '');
+  const [drinking, setDrinking] = useState(profile?.drinking ?? '');
+  const [smoking, setSmoking] = useState(profile?.smoking ?? '');
+  const [firstDate, setFirstDate] = useState(profile?.firstDate ?? '');
+  const [religion, setReligion] = useState(profile?.religion ?? '');
+
+  const [isCompletionModalOpen, setIsCompletionModalOpen] = useState(false);
+  const [isPhotoUploaderOpen, setIsPhotoUploaderOpen] = useState(false);
+
+  // This effect will keep local state in sync if the PROFILE object ever changes while on the page.
+  React.useEffect(() => {
+    if (profile) {
+      setBio(profile.bio ?? '');
+      setOccupation(profile.occupation ?? '');
+      setLocation(profile.location?.name ?? '');
+      setLoveLanguage(profile.loveLanguage ?? '');
+      setEducation(profile.education ?? '');
+      setHeight(profile.height ?? '');
+      setDrinking(profile.drinking ?? '');
+      setSmoking(profile.smoking ?? '');
+      setFirstDate(profile.firstDate ?? '');
+      setReligion(profile.religion ?? '');
+    }
+  }, [profile]);
+
+  // Show a loading spinner if the profile object is not yet available.
+  if (!profile) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-b from-[#22090E] to-[#2E0C13]">
+        <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white"></div>
+      </div>
+    );
   }
 
-  const handleCompletionModalClose = (answers) => {
-    if (answers) {
-      updateCurrentUser(answers);
-      toast.success('Profile updated!');
+  const calculateAge = (dobString: string | undefined) => {
+    if (!dobString) return 0;
+    const birthDate = new Date(dobString);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) {
+      age--;
     }
-    setIsCompletionModalOpen(false);
+    return age;
+  };
+  const age = calculateAge(profile.date_of_birth);
+
+
+  const handleCompletionModalClose = async (answers) => {
+    if (answers) {
+      try {
+        await updateUserProfile(answers);
+        setIsCompletionModalOpen(false);
+      } catch (error) {
+        console.error('Failed to update profile:', error);
+        // Modal will stay open so user can try again
+      }
+    } else {
+      setIsCompletionModalOpen(false);
+    }
   };
 
   const currentSubscription = subscriptionConfig[user.subscription || 'free'];
@@ -43,20 +92,23 @@ const ProfilePage: React.FC = () => {
   const { buttonStyle, setButtonStyle } = useUiStore();
 
   const handleSaveProfile = () => {
-    updateCurrentUser({
+    updateUserProfile({
       bio,
-      age,
       occupation,
+      loveLanguage,
       education,
+      height,
       drinking,
       smoking,
+      firstDate,
+      religion,
     });
     setIsEditing(false);
-    toast.success('Profile updated successfully!');
   };
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    console.log('[ProfilePage] handleLogout called.');
+    await signOut();
     toast.success('Logged out successfully');
   };
 
@@ -66,39 +118,36 @@ const ProfilePage: React.FC = () => {
 
   const calculateProfileCompletion = () => {
     const fields = [
-      currentUser.bio,
-      currentUser.age,
-      currentUser.location?.city,
-      currentUser.occupation,
-      currentUser.education,
-      currentUser.drinking,
-      currentUser.smoking,
-      (currentUser.photos?.length || 0) > 1,
-      currentUser.interests?.length > 0,
-      currentUser.hereFor?.length > 0,
-      currentUser.aboutMe?.delicacies?.length > 0,
-      currentUser.aboutMe?.travel?.length > 0,
-      currentUser.religion,
-      currentUser.height,
-      currentUser.firstDate
+      user.bio,
+      age > 0,
+      user.location?.name,
+      user.occupation,
+      user.education,
+      user.drinking,
+      user.smoking,
+      (user.photos?.length || 0) > 1,
+      user.interests?.length > 0,
+      user.hereFor?.length > 0,
+      user.aboutMe?.delicacies?.length > 0,
+      user.aboutMe?.travel?.length > 0,
+      user.religion,
+      user.height,
+      user.firstDate
     ];
     const completedFields = fields.filter(field => {
       if (typeof field === 'boolean') return field;
       if (typeof field === 'number') return true;
-      return field && field.length > 0;
+      return !!field;
     });
     let completion = (completedFields.length / fields.length);
 
     // Adjust for activity
-    const hoursSinceLastActivity = (new Date().getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60);
+    const hoursSinceLastActivity = lastActivity ? (new Date().getTime() - new Date(lastActivity).getTime()) / (1000 * 60 * 60) : Infinity;
     if (hoursSinceLastActivity > 72) { // 3 days
       completion *= 0.8;
     } else if (hoursSinceLastActivity > 24) { // 1 day
       completion *= 0.9;
     }
-
-    // Placeholder for unmatch penalty
-    // completion *= (1 - (unmatchCount * 0.05));
 
     return Math.round(completion * 100);
   };
@@ -107,7 +156,7 @@ const ProfilePage: React.FC = () => {
   const visibility = profileCompletion > 80 ? 'High' : profileCompletion > 50 ? 'Medium' : 'Low';
 
   return (
-    <div className={`min-h-screen p-4 bg-gradient-to-b from-[#22090E] to-[#2E0C13] text-white`}>
+    <div className={`min-h-screen p-4 pb-28 bg-gradient-to-b from-[#22090E] to-[#2E0C13] text-white`}>
       <div className="max-w-4xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
@@ -128,9 +177,7 @@ const ProfilePage: React.FC = () => {
             <button
               onClick={() => setIsCompletionModalOpen(true)}
               className="px-4 py-2 bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-all duration-300"
-            >
-              Complete Profile
-            </button>
+            >Complete Profile</button>
           </div>
         </motion.div>
 
@@ -161,30 +208,30 @@ const ProfilePage: React.FC = () => {
           <div className="flex items-center space-x-6 mb-6">
             <div className="relative">
               <img
-                src={user.photos[0]}
+                src={profile.photos?.[0]}
                 alt="Profile"
                 className="w-24 h-24 rounded-full object-cover border-4 border-white/50"
               />
-              <button className="absolute bottom-0 right-0 p-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition-all duration-300">
+              <button onClick={() => setIsPhotoUploaderOpen(true)} className="absolute bottom-0 right-0 p-2 bg-white/20 text-white rounded-full hover:bg-white/30 transition-all duration-300">
                 <Camera className="w-4 h-4" />
               </button>
             </div>
             
             <div className="flex-1">
               <div className="flex items-center space-x-3 mb-2">
-                <h2 className="text-2xl font-bold text-white">{user.name}</h2>
+                <h2 className="text-2xl font-bold text-white">{profile.name}</h2>
                 <span className="text-xl text-gray-300">{age}</span>
-                {user.subscription === 'vip' && (
+                {profile.subscription === 'vip' && (
                   <img src="/VIP.png" alt="VIP" className="w-6 h-6 ml-2" />
                 )}
-                {user.isVerified && (
+                {profile.isVerified && (
                   <CheckCircle className="w-6 h-6 text-blue-400" />
                 )}
               </div>
               
               <div className="flex items-center space-x-2 mb-3">
                 <MapPin className="w-4 h-4 text-gray-300" />
-                <span className="text-gray-300">{location}</span>
+                <span className="text-gray-300">{profile.location?.name ?? 'Not specified'}</span>
               </div>
 
               <div className={`inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/20`}>
@@ -207,7 +254,7 @@ const ProfilePage: React.FC = () => {
                 placeholder="Tell us about yourself..."
               />
             ) : (
-              <p className="text-gray-300 leading-relaxed">{bio}</p>
+              <p className="text-gray-300 leading-relaxed">{profile.bio}</p>
             )}
           </div>
 
@@ -244,70 +291,7 @@ const ProfilePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-6">
-            <h3 className="text-lg font-semibold text-white mb-4">My Details</h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <BookOpen className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Education</p>
-                  <p className="text-gray-300 capitalize">{user.education || '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <Ruler className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Height</p>
-                  <p className="text-gray-300">{user.height ? `${user.height} cm` : '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <GlassWater className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Drinking</p>
-                  <p className="text-gray-300 capitalize">{user.drinking || '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <Cigarette className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Smoking</p>
-                  <p className="text-gray-300 capitalize">{user.smoking || '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <User className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Religion</p>
-                  <p className="text-gray-300">{user.religion || '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <Heart className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">First Date</p>
-                  <p className="text-gray-300 capitalize">{user.firstDate?.replace('-', ' ') || '-'}</p>
-                </div>
-              </div>
-              <div className="p-3 bg-white/10 rounded-xl flex items-center space-x-2">
-                <Briefcase className="w-5 h-5 text-gray-300" />
-                <div>
-                  <p className="font-semibold text-gray-200">Occupation</p>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={occupation}
-                      onChange={(e) => setOccupation(e.target.value)}
-                      className="w-full bg-white/10 border border-white/20 rounded-md px-2 py-1 text-white placeholder-gray-400 focus:outline-none focus:ring-1 focus:ring-pink-400"
-                      placeholder="e.g. Accountant"
-                    />
-                  ) : (
-                    <p className="text-gray-300 capitalize">{occupation || '-'}</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+
 
           {isEditing && (
             <div className="flex space-x-3">
@@ -464,6 +448,16 @@ const ProfilePage: React.FC = () => {
       </div>
       {isCompletionModalOpen && (
         <ProfileCompletionModal onClose={handleCompletionModalClose} />
+      )}
+      {isPhotoUploaderOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-gray-800 rounded-lg p-4">
+            <ProfilePhotoUploader />
+            <button onClick={() => setIsPhotoUploaderOpen(false)} className="mt-4 w-full font-bold py-2 px-4 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-all duration-300">
+              Close
+            </button>
+          </div>
+        </div>
       )}
     </div>
   );
