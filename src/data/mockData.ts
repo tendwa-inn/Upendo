@@ -1,53 +1,7 @@
 import { User, Match, Message, Notification, Subscription } from '../types';
 import { Crown, Shield, User as UserIcon } from 'lucide-react';
 
-export const subscriptionConfig: Record<Subscription, { title: string; color: string; bgColor: string; icon: React.ElementType; features: string[]; price: string; theme: string; }> = {
-  free: {
-    title: 'Free Account',
-    color: 'text-gray-600',
-    bgColor: 'bg-gray-100',
-    icon: UserIcon,
-    features: ['50 swipes first day', '10 daily swipes', 'Basic filters'],
-    price: 'Free',
-    theme: 'gradient-romantic',
-  },
-  pro: {
-    title: 'Pro Account',
-    color: 'text-white',
-    bgColor: 'bg-pro-grey',
-    icon: Shield,
-    features: ['Unlimited swipes', 'Blue verification', 'Advanced filters', 'See who liked you'],
-    price: 'K20/week or K100/month',
-    theme: 'gradient-pro',
-  },
-  vip: {
-    title: 'VIP Account',
-    color: 'text-yellow-600',
-    bgColor: 'bg-yellow-100',
-    icon: Crown,
-    features: ['Exclusive lobby', 'Gold verification', 'International mode', 'Priority visibility'],
-    price: 'K50/week',
-    theme: 'vip-gradient',
-  },
-  premium: {
-    title: 'Premium Account',
-    color: 'text-purple-600',
-    bgColor: 'bg-purple-100',
-    icon: Crown,
-    features: ['All VIP features', 'Personalized matchmaking', 'Incognito mode'],
-    price: 'K100/week',
-    theme: 'premium-gradient',
-  },
-  admin: {
-    title: 'Admin Account',
-    color: 'text-red-600',
-    bgColor: 'bg-red-100',
-    icon: Shield,
-    features: ['Full System Access', 'User Management', 'Content Moderation'],
-    price: 'N/A',
-    theme: 'gradient-pro',
-  },
-};
+
 
 export const mockUsers: User[] = [
   {

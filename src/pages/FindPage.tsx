@@ -2,155 +2,117 @@ import React, { useEffect, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useSwipeStore } from '../stores/swipeStore';
 import { useMatchStore } from '../stores/matchStore';
+
+import { useDiscoveryStore } from '../stores/discoveryStore';
 import { useAuthStore } from '../stores/authStore';
 import { useUiStore } from '../stores/uiStore';
 import { useNotificationStore } from '../stores/notificationStore';
-import { calculateVisibilityScore } from '../lib/utils';
+import { useLikesStore } from '../stores/likesStore';
+import { useViewsStore } from '../stores/viewsStore';
 import SwipeCard from '../components/swipe/SwipeCard';
+import UserListItem from '../components/UserListItem';
 import FilterModal from '../components/modals/FilterModal';
-import { SlidersHorizontal, Bell } from 'lucide-react';
-import { mockUsers } from '../data/mockData';
+import { SlidersHorizontal, Bell, Eye, Heart } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import ProfilePhotoUploader from '../components/ProfilePhotoUploader';
+import PhotoWall from '../components/PhotoWall';
+import ProfileCompletionWall from '../components/ProfileCompletionWall';
+import MatchAnimation from '../components/modals/MatchAnimation';
+import { useMatchAnimationStore } from '../stores/matchAnimationStore';
 
 const FindPage: React.FC = () => {
-  const {
-    potentialMatches,
-    currentCardIndex,
-    swipeLeft,
-    swipeRight,
-    rewind,
-    fetchPotentialMatches,
-    canSwipe,
-    outOfSwipesAt,
-    replenishmentStage,
-  } = useSwipeStore();
-  const { user: currentUser } = useAuthStore();
+  const { swipeRight, swipeLeft, loadSwipeState } = useSwipeStore();
+  const { potentialMatches, fetchPotentialMatches } = useDiscoveryStore();
+  const [currentCardIndex, setCurrentCardIndex] = useState(0);
+  const { user: currentUser, profile } = useAuthStore();
+  const { unreadCount, fetchNotifications } = useNotificationStore();
   const { createMatch, matches } = useMatchStore();
+  const { usersWhoLikedMe, fetchUsersWhoLikedMe } = useLikesStore();
+  const { usersWhoViewedMe, fetchUsersWhoViewedMe } = useViewsStore();
   const [isLoading, setIsLoading] = useState(true);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<any>({});
   const [isInterstitialVisible, setIsInterstitialVisible] = useState(false);
   const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
   const { buttonStyle } = useUiStore();
-  const { unreadCount, fetchNotifications } = useNotificationStore();
+  const [activeTab, setActiveTab] = useState<'discover' | 'views' | 'likes'>('discover');
+  const { isMatchAnimationVisible, matchedUser, hideMatchAnimation } = useMatchAnimationStore();
 
-  useEffect(() => {
-    fetchNotifications();
-  }, [fetchNotifications]);
+
 
   useEffect(() => {
     const loadData = async () => {
       setIsLoading(true);
       await fetchPotentialMatches();
+      await fetchUsersWhoLikedMe();
+      await fetchUsersWhoViewedMe();
       setIsLoading(false);
     };
     loadData();
-  }, [fetchPotentialMatches]);
+  }, [fetchUsersWhoLikedMe, fetchUsersWhoViewedMe]);
 
-  const handleSwipe = () => {
-    setCurrentPhotoIndex(0);
-  };
+  useEffect(() => {
+    loadSwipeState();
+    fetchNotifications();
+  }, [loadSwipeState, fetchNotifications]);
 
-  const handleSwipeRight = (userId: string) => {
-    if (isInterstitialVisible) return;
+  const handleSwipeRight = async (userId: string) => {
     const swipedUser = potentialMatches.find((u) => u.id === userId);
-    if (!swipedUser || !currentUser) return;
+    if (!swipedUser) return;
 
-    swipeRight(userId);
-    setIsInterstitialVisible(true);
-    setTimeout(() => {
-      handleSwipe();
-      setIsInterstitialVisible(false);
-      if (Math.random() < 0.5) { // Simplified 50% match chance
-        createMatch(swipedUser.id);
-        toast.success(`You matched with ${swipedUser.name}!`);
-      }
-    }, 1000);
+    const { matched } = await swipeRight(userId);
+    if (matched) {
+      useMatchAnimationStore.getState().showMatchAnimation(swipedUser);
+    }
+    setCurrentCardIndex(prev => prev + 1);
   };
 
   const handleSwipeLeft = (userId: string) => {
-    if (isInterstitialVisible) return;
     swipeLeft(userId);
-    setIsInterstitialVisible(true);
-    setTimeout(() => {
-      handleSwipe();
-      setIsInterstitialVisible(false);
-    }, 1000);
+    setCurrentCardIndex(prev => prev + 1);
   };
 
-  const processedMatches = React.useMemo(() => {
-    let filteredUsers = potentialMatches.filter(user => {
-      if (filters.ageRange && (user.age < filters.ageRange[0] || user.age > filters.ageRange[1])) return false;
-      if (filters.tribe && user.tribe !== filters.tribe) return false;
-      return true;
-    });
-    if (currentUser?.subscription === 'free') {
-      return filteredUsers.map(u => ({ ...u, canMessage: Math.random() < 0.3 }));
-    }
-    return filteredUsers;
-  }, [potentialMatches, currentUser, filters]);
 
-  const getNextReplenishmentTime = () => {
-    if (!outOfSwipesAt || replenishmentStage > 3) return null;
 
-    const replenishmentHours = [2, 8, 10];
-    const stageIndex = replenishmentStage - 1;
-    
-    if (stageIndex >= replenishmentHours.length) return null;
 
-    const replenishmentTime = new Date(outOfSwipesAt.getTime() + replenishmentHours[stageIndex] * 60 * 60 * 1000);
-    return replenishmentTime;
-  };
-
-  const [timeToNext, setTimeToNext] = useState('');
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const nextTime = getNextReplenishmentTime();
-      if (nextTime) {
-        const diff = nextTime.getTime() - new Date().getTime();
-        if (diff > 0) {
-          const hours = Math.floor(diff / (1000 * 60 * 60));
-          const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-          setTimeToNext(`${hours}h ${minutes}m`);
-        } else {
-          setTimeToNext('Now!');
-        }
-      }
-    }, 1000);
-    return () => clearInterval(interval);
-  }, [outOfSwipesAt, replenishmentStage]);
 
   if (isLoading) {
     return <div className="flex items-center justify-center h-full text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">Loading...</div>;
   }
 
-  if (!currentUser?.photos || currentUser.photos.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">
-        <h2 className="text-2xl font-bold mb-4">Upload Photos to Continue</h2>
-        <p className="mb-8">You need to upload at least one photo to start seeing matches.</p>
-        <ProfilePhotoUploader />
-      </div>
-    );
+  const getMissingFields = () => {
+    const missing = [];
+    if (!profile?.bio) missing.push('Add a bio');
+    if (!profile?.relationship_intent) missing.push('Set what you are here for');
+    if (!profile?.photos || profile.photos.length < 1) missing.push('Upload at least one photo');
+    return missing;
+  };
+
+  const missingFields = getMissingFields();
+
+  if (missingFields.length > 0) {
+    return <ProfileCompletionWall missingFields={missingFields} />;
   }
 
-  const handleApplyFilters = (newFilters: any) => setFilters(newFilters);
-  const handleBoost = () => console.log("Boost action");
+  const handleLikeBack = async (userId: string) => {
+    await swipeRight(userId);
+    // Refresh the likes list after liking back
+    await fetchUsersWhoLikedMe();
+  };
 
-  const currentMatch = processedMatches[currentCardIndex];
+  const currentMatch = potentialMatches[currentCardIndex];
+  const handleApplyFilters = (newFilters: any) => setFilters(newFilters);
 
   return (
     <div className="relative h-screen w-screen text-white bg-gradient-to-b from-[#22090E] to-[#2E0C13]">
-      {/* Background logo */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-        <img src="/Logo white.png" alt="Upendo Logo" className="w-3/4 h-3/4 object-contain opacity-5" />
-      </div>
+      {isMatchAnimationVisible && matchedUser && (
+        <MatchAnimation matchedUser={matchedUser} onClose={hideMatchAnimation} />
+      )}
+
+      
       {/* Header */}
-      <div className="absolute top-0 left-0 right-0 z-20 w-full max-w-md mx-auto flex justify-between items-center p-4 pt-safe-top">
+      <div className="absolute top-0 left-0 right-0 z-20 w-full max-w-md mx-auto flex items-center p-4 pt-safe-top">
         <button onClick={() => setIsFilterModalOpen(true)} className="p-2"><SlidersHorizontal className="w-6 h-6" /></button>
-        <h1 className="text-2xl font-bold">Find</h1>
+        <h1 className="text-2xl font-bold flex-1 text-center">Find</h1>
         <Link to="/notifications" className="p-2 relative">
           <Bell className="w-6 h-6" />
           {unreadCount > 0 && (
@@ -161,49 +123,121 @@ const FindPage: React.FC = () => {
         </Link>
       </div>
 
-      {/* Photo Progress */}
-      {currentMatch && (
-        <div className="absolute bottom-20 left-4 right-4 z-20 flex space-x-1">
-          {currentMatch.photos.map((_, index) => (
-            <div key={index} className="h-1.5 flex-1 rounded-full bg-white/30 backdrop-blur-sm">
-              <motion.div
-                className={`h-full rounded-full ${buttonStyle === 'white-clean' ? 'bg-white' : 'bg-yellow-500'}`}
-                initial={{ width: '0%' }}
-                animate={{ width: index === currentPhotoIndex ? '100%' : '0%' }}
-                transition={{ duration: 0.2, ease: 'linear' }}
-              />
-            </div>
-          ))}
+      {/* Tabs */}
+      <div className="absolute top-16 left-0 right-0 z-20 w-full max-w-md mx-auto px-4">
+        <div className="flex justify-center items-center gap-8">
+          <button
+            onClick={() => setActiveTab('discover')}
+            className={`text-sm font-medium transition-all ${
+              activeTab === 'discover' 
+                ? 'text-pink-400 border-b-2 border-pink-400 pb-1' 
+                : 'text-white/70 hover:text-white'
+            }`}
+          >Discover</button>
+          <button
+            onClick={() => setActiveTab('views')}
+            className={`text-sm font-medium transition-all flex items-center gap-1 ${
+              activeTab === 'views' 
+                ? 'text-pink-400 border-b-2 border-pink-400 pb-1' 
+                : 'text-white/70 hover:text-white'
+            }`}
+          >
+            <Eye className="w-4 h-4" />
+            Views
+          </button>
+          <button
+            onClick={() => setActiveTab('likes')}
+            className={`text-sm font-medium transition-all flex items-center gap-1 ${
+              activeTab === 'likes' 
+                ? 'text-pink-400 border-b-2 border-pink-400 pb-1' 
+                : 'text-white/70 hover:text-white'
+            }`}
+          >
+            <Heart className="w-4 h-4" />
+            Likes
+          </button>
         </div>
-      )}
+      </div>
 
-      <div className="absolute inset-0">
-        <AnimatePresence>
-          {!isInterstitialVisible && processedMatches.slice(currentCardIndex).map((user, index) => (
-            <SwipeCard
-              key={user.id}
-              user={user}
-              onSwipeLeft={handleSwipeLeft}
-              onSwipeRight={handleSwipeRight}
-              onRewind={rewind}
-              onBoost={handleBoost}
-              isActive={index === 0}
-              canSwipe={canSwipe()}
-              currentPhotoIndex={currentPhotoIndex}
-              setCurrentPhotoIndex={setCurrentPhotoIndex}
-            />
-          ))}
-        </AnimatePresence>
-        
-        {currentCardIndex >= processedMatches.length && !isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center text-center">
-            <div className="mt-64">
-              <h2 className="text-2xl font-bold">No more profiles</h2>
-              {currentUser?.subscription === 'free' && outOfSwipesAt && replenishmentStage <= 3 && (
-                <p className="mt-2">Next swipes in: {timeToNext}</p>
+      {/* Tab Content */}
+      <div className="absolute top-32 left-0 right-0 bottom-0">
+        {activeTab === 'discover' && (
+          <>
+            {/* Photo Progress */}
+            {currentMatch && (
+              <div className="absolute bottom-20 left-4 right-4 z-20 flex space-x-1">
+                {currentMatch.photos.map((_, index) => (
+                  <div key={index} className="h-1.5 flex-1 rounded-full bg-white/30 backdrop-blur-sm">
+                    <motion.div
+                      className={`h-full rounded-full ${buttonStyle === 'white-clean' ? 'bg-white' : 'bg-yellow-500'}`}
+                      initial={{ width: '0%' }}
+                      animate={{ width: index === currentPhotoIndex ? '100%' : '0%' }}
+                      transition={{ duration: 0.2, ease: 'linear' }}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="absolute inset-0">
+              <AnimatePresence>
+                {potentialMatches.slice(currentCardIndex).map((user, index) => (
+                  <SwipeCard
+                    key={user.id}
+                    user={user}
+                    onSwipeLeft={handleSwipeLeft}
+                    onSwipeRight={handleSwipeRight}
+                    isActive={index === 0}
+                    currentPhotoIndex={currentPhotoIndex}
+                    setCurrentPhotoIndex={setCurrentPhotoIndex}
+                  />
+                ))}
+              </AnimatePresence>
+              
+              {currentCardIndex >= potentialMatches.length && !isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center text-center">
+                  <div className="mt-64">
+                    <h2 className="text-2xl font-bold">No more profiles</h2>
+                    <p className="mt-2">Check back later for more potential matches.</p>
+                  </div>
+                </div>
               )}
-              <p className="mt-2">Check back later for more potential matches.</p>
             </div>
+          </>
+        )}
+
+        {activeTab === 'views' && (
+          <div className="p-4">
+            <h2 className="text-xl font-bold mb-4">Profile Views</h2>
+            {usersWhoViewedMe.length === 0 ? (
+              <p className="text-white/70">No one has viewed your profile yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {usersWhoViewedMe.map((user) => (
+                  <UserListItem key={user.id} user={user} type="view" />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {activeTab === 'likes' && (
+          <div className="p-4">
+            <h2 className="text-xl font-bold mb-4">Likes</h2>
+            {usersWhoLikedMe.length === 0 ? (
+              <p className="text-white/70">No one has liked you yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {usersWhoLikedMe.map((user) => (
+                  <UserListItem 
+                    key={user.id} 
+                    user={user} 
+                    type="like" 
+                    onLikeBack={handleLikeBack}
+                  />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

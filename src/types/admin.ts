@@ -89,3 +89,17 @@ export interface EscalationTicket {
   resolvedAt?: Date;
   resolution?: string;
 }
+
+export interface PromoCode {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  type: 'message_requests' | 'popularity_boost' | 'pro_account' | 'vip_account' | 'unlimited_swipes' | 'profile_views';
+  durationDays: number | null;
+  maxUses: number | null;
+  timesUsed: number;
+  createdAt: Date;
+  expiresAt?: Date;
+  effect: { [key: string]: any };
+}

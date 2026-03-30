@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabaseClient';
 import toast from 'react-hot-toast';
 import { Upload, X } from 'lucide-react';
 
-const ProfilePhotoUploader: React.FC = () => {
+const ProfilePhotoUploader: React.FC<{ maxPhotos?: number }> = ({ maxPhotos = 6 }) => {
   const { user, updateUserProfile } = useAuthStore();
   const [photos, setPhotos] = useState<File[]>([]);
   const [previews, setPreviews] = useState<string[]>([]);
@@ -66,16 +66,29 @@ const ProfilePhotoUploader: React.FC = () => {
 
       toast.loading('Saving photos to your profile...', { id: uploadToastId });
 
+      const { data: currentProfile, error: fetchError } = await supabase
+        .from('profiles')
+        .select('photos')
+        .eq('id', user.id)
+        .single();
+
+      if (fetchError) {
+        throw new Error(`Could not fetch current profile: ${fetchError.message}`);
+      }
+
+      const existingPhotos = currentProfile?.photos || [];
+      const newPhotos = [...existingPhotos, ...uploadedUrls];
+
       const { error: profileError } = await supabase
         .from('profiles')
-        .update({ photos: uploadedUrls })
+        .update({ photos: newPhotos })
         .eq('id', user.id);
 
       if (profileError) {
         throw new Error(`Failed to save photos to profile: ${profileError.message}`);
       }
 
-      updateUserProfile({ photos: uploadedUrls });
+      updateUserProfile({ photos: newPhotos });
       toast.success('Photos uploaded successfully!', { id: uploadToastId });
       setPhotos([]);
       setPreviews([]);
@@ -95,14 +108,14 @@ const ProfilePhotoUploader: React.FC = () => {
             <button onClick={() => removePhoto(index)} className="absolute top-1 right-1 bg-red-600 text-white rounded-full w-6 h-6 flex items-center justify-center text-xs">X</button>
           </div>
         ))}
-        {photos.length < 6 && (
+        {photos.length < maxPhotos && (
           <label htmlFor="photo-upload" className="cursor-pointer flex items-center justify-center border-2 border-dashed border-gray-500 rounded-lg aspect-square hover:bg-gray-700 transition-colors">
             <Upload className="w-8 h-8 text-gray-400" />
             <input id="photo-upload" type="file" multiple accept="image/*" className="hidden" onChange={handleFileChange} />
           </label>
         )}
       </div>
-      <button onClick={handleSavePhotos} disabled={uploading || photos.length === 0} className="w-full font-bold py-3 px-4 bg-pink-600 text-white rounded-xl hover:bg-pink-700 transition-all duration-300 disabled:bg-pink-800 disabled:cursor-not-allowed">
+      <button onClick={handleSavePhotos} disabled={uploading || photos.length === 0} className="w-full font-bold py-3 px-4 bg-green-600 text-white rounded-xl hover:bg-green-700 transition-all duration-300 disabled:bg-green-800 disabled:cursor-not-allowed">
         {uploading ? 'Uploading...' : 'Save Photos'}
       </button>
     </div>

@@ -15,19 +15,22 @@ export interface User {
   gender?: 'man' | 'woman' | 'other';
   lookingFor?: 'men' | 'women' | 'both';
   hereFor?: string[];
-  location?: { latitude: number; longitude: number; city: string };
+  location?: { name: string; latitude: number; longitude: number; };
   isVerified?: boolean;
-  aboutMe?: { delicacies?: string[]; travel?: string[] };
-  education?: string;
+  aboutMe?: { delicacies?: { food: string; photo?: string }[]; travel?: { place: string; summary: string }[] };
+  education?: 'not-completed' | 'student' | 'undergraduate' | 'postgraduate' | 'graduate' | 'diploma' | 'bachelors' | 'masters';
   height?: number;
-  drinking?: string;
-  smoking?: string;
+  drinking?: 'never' | 'occasionally' | 'socially' | 'regularly';
+  smoking?: 'never' | 'occasionally' | 'socially' | 'regularly';
   religion?: string;
-  firstDate?: string;
-  preferences?: { distance: number; ageRange?: [number, number] };
+  firstDate?: 'at-home' | 'at-the-gym' | 'at-the-club' | 'on-a-date';
+  preferences?: { distance: number; ageRange?: [number, number]; gender: string; };
   swipeCount?: number;
   replyRate?: number;
   loveLanguage?: string;
+  lastActive?: Date;
+  messageRequestsSent?: number;
+  messageRequestResetDate?: Date;
 }
 
 export interface Message {
@@ -75,6 +78,14 @@ export interface Story {
   userId: string;
   imageUrl: string;
   createdAt: Date;
+  user: User;
+  likes: StoryLike[];
+}
+
+export interface StoryLike {
+  id: string;
+  story_id: string;
+  user_id: string;
 }
 
 export interface SwipeCard extends User {
@@ -85,4 +96,13 @@ export interface SwipeStats {
   likes: number;
   passes: number;
   matches: number;
+}
+
+export interface AuthUser {
+  id: string;
+  email: string;
+  phone?: string;
+  isVerified: boolean;
+  subscription: 'free' | 'pro' | 'vip';
+  subscriptionExpiry?: Date;
 }

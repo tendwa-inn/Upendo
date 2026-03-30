@@ -36,6 +36,21 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
   const [activeButton, setActiveButton] = useState<string | null>(null);
   const [isBioExpanded, setIsBioExpanded] = useState(false);
 
+  const formatDistance = (distanceInMeters) => {
+    if (distanceInMeters === null || typeof distanceInMeters === 'undefined') return null;
+    return `${(distanceInMeters / 1000).toFixed(1)}km away`;
+  };
+
+  const distance = formatDistance(user.distance_meters);
+
+  const formatHeight = (cm) => {
+    if (!cm) return null;
+    const inches = cm / 2.54;
+    const feet = Math.floor(inches / 12);
+    const remainingInches = Math.round(inches % 12);
+    return `${feet}'${remainingInches}" (${cm}cm)`;
+  };
+
   const handlePressStart = (button: string) => setActiveButton(button);
   const handlePressEnd = () => setActiveButton(null);
 
@@ -237,7 +252,7 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
 
         <motion.img
           key={currentPhotoIndex}
-          src={(user.photos && user.photos[currentPhotoIndex]) || 'https://via.placeholder.com/600x800'}
+          src={(user.photos && user.photos[currentPhotoIndex]) || 'https://placehold.co/600x800'}
           alt={user.name || 'User'}
           className="w-full h-full object-cover"
           initial={{ opacity: 0.8 }}
@@ -251,6 +266,12 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
         <div className="absolute bottom-28 left-0 right-0 p-5 pr-24 text-white z-10">
           <div className="mb-4">
             <h2 className="text-3xl font-bold cursor-pointer" onClick={() => navigate(`/user/${user.id}`)}>{user.name || 'User'}, {user.age || ''}</h2>
+            {distance && (
+              <div className="flex items-center gap-1.5 text-white/80 text-sm mt-1">
+                <MapPin size={14} />
+                <span>{distance}</span>
+              </div>
+            )}
             <div className="text-gray-300 mt-1">
               <p className={`text-white mt-2 text-base ${!isBioExpanded && 'line-clamp-2'}`}>{user.bio || ''}</p>
               {user.bio && user.bio.length > 100 && (
@@ -261,80 +282,42 @@ const SwipeCard: React.FC<SwipeCardProps> = ({
             </div>
           </div>
 
-          <div className="flex flex-wrap gap-2 mb-5">
-            {user.hereFor.map(purpose => (
-              <span key={purpose} className={`px-3 py-1.5 rounded-full text-xs font-bold ${purpose === 'Serious Relationship' ? 'bg-pink-500/80' : 'bg-black/30'}`}>
-                {purpose}
-              </span>
-            ))}
-            {user.tribe && (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-blue-500/80">
-                {user.tribe}
-              </span>
-            )}
-            {user.drinking && (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-purple-500/80">
-                {user.drinking === 'socially' ? 'Social Drinker' : 
-                 user.drinking === 'occasionally' ? 'Drinks Occasionally' :
-                 user.drinking === 'never' ? 'Non-Drinker' : 'Drinks'}
-              </span>
-            )}
-            {user.smoking && (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-orange-500/80">
-                {user.smoking === 'never' ? 'Non-Smoker' : 
-                 user.smoking === 'occasionally' ? 'Smokes Occasionally' :
-                 user.smoking === 'socially' ? 'Social Smoker' : 'Smoker'}
-              </span>
-            )}
-            {user.education && (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-teal-500/80">
-                {user.education === 'bachelors' ? 'Bachelor\'s Degree' :
-                 user.education === 'masters' ? 'Master\'s Degree' :
-                 user.education === 'phd' ? 'PhD' :
-                 user.education === 'high-school' ? 'High School' :
-                 user.education === 'some-college' ? 'Some College' :
-                 user.education === 'associates' ? 'Associate\'s Degree' :
-                 user.education === 'trade-school' ? 'Trade School' :
-                 user.education === 'not-working' ? 'Not Working' :
-                 user.education === 'student' ? 'Student' :
-                 user.education.charAt(0).toUpperCase() + user.education.slice(1)}
-              </span>
-            )}
-            {user.occupation && (
-              <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-500/80">
-                {user.occupation === 'accountant' ? 'Accountant' :
-                 user.occupation === 'teacher' ? 'Teacher' :
-                 user.occupation === 'engineer' ? 'Engineer' :
-                 user.occupation === 'doctor' ? 'Doctor' :
-                 user.occupation === 'nurse' ? 'Nurse' :
-                 user.occupation === 'lawyer' ? 'Lawyer' :
-                 user.occupation === 'entrepreneur' ? 'Entrepreneur' :
-                 user.occupation === 'artist' ? 'Artist' :
-                 user.occupation === 'musician' ? 'Musician' :
-                 user.occupation === 'chef' ? 'Chef' :
-                 user.occupation === 'driver' ? 'Driver' :
-                 user.occupation === 'sales' ? 'Sales' :
-                 user.occupation === 'manager' ? 'Manager' :
-                 user.occupation === 'developer' ? 'Developer' :
-                 user.occupation === 'consultant' ? 'Consultant' :
-                 user.occupation === 'not-working' ? 'Not Working' :
-                 user.occupation.charAt(0).toUpperCase() + user.occupation.slice(1)}
-              </span>
-            )}
-          </div>
-
-          {mutualInterests.length > 0 && (
-            <div className="mb-5">
-              <h3 className="font-bold text-sm mb-2">Mutual Interests</h3>
+          <div className="space-y-4">
+            {user.relationship_intent && (
               <div className="flex flex-wrap gap-2">
-                {mutualInterests.map(interest => (
-                  <span key={interest} className="px-3 py-1.5 rounded-full text-xs font-bold bg-green-500/80">
-                    {interest}
-                  </span>
-                ))}
+                  <span className="px-3 py-1 rounded-full text-sm font-semibold bg-pink-500/20 text-pink-300">{user.relationship_intent}</span>
               </div>
+            )}
+
+            {mutualInterests.length > 0 && (
+              <div>
+                <h3 className="text-sm font-semibold text-white/70 mb-2">Mutual Interests</h3>
+                <div className="flex flex-wrap gap-2">
+                  {mutualInterests.map(interest => (
+                      <span key={interest} className="px-3 py-1 rounded-full text-sm font-semibold bg-white/10 text-white/80">{interest}</span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              {user.kids && (
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-blue-500/20 text-blue-300">{user.kids}</span>
+              )}
+              {user.occupation && (
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-green-500/20 text-green-300">{user.occupation}</span>
+              )}
+              {user.religion && (
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-purple-500/20 text-purple-300">{user.religion}</span>
+              )}
+              {user.first_date && (
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-yellow-500/20 text-yellow-300">{user.first_date}</span>
+              )}
+              {user.height && (
+                <span className="px-3 py-1 rounded-full text-sm font-semibold bg-red-500/20 text-red-300">{formatHeight(user.height)}</span>
+              )}
             </div>
-          )}
+          </div>
         </div>
       </div>
     </motion.div>

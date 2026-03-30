@@ -1,22 +1,24 @@
-// This is a mock encryption/decryption for demonstration purposes only.
-// In a real application, you would use a robust, well-vetted cryptography library.
+import CryptoJS from 'crypto-js';
+
+const SECRET_KEY = import.meta.env.VITE_SECRET_KEY;
 
 export const encryptMessage = (message: string): string => {
-  // Simple Base64 encoding to simulate encryption
-  try {
-    return btoa(message);
-  } catch (error) {
-    console.error('Encryption failed:', error);
-    return message; // Return original message on failure
-  }
+  return CryptoJS.AES.encrypt(message, SECRET_KEY).toString();
 };
 
-export const decryptMessage = (encryptedMessage: string): string => {
-  // Simple Base64 decoding to simulate decryption
-  try {
-    return atob(encryptedMessage);
-  } catch (error) {
-    console.error('Decryption failed:', error);
-    return encryptedMessage; // Return encrypted message on failure
-  }
-};
+export const decryptMessage = (encryptedMessage: string): string => { 
+   try { 
+     const bytes = CryptoJS.AES.decrypt(encryptedMessage, SECRET_KEY); 
+     const decrypted = bytes.toString(CryptoJS.enc.Utf8); 
+ 
+     if (!decrypted) { 
+       console.warn("Decryption failed for:", encryptedMessage); 
+       return "[Decryption failed]"; 
+     } 
+ 
+     return decrypted; 
+   } catch (error) { 
+     console.error("Decrypt error:", error); 
+     return "[Error]"; 
+   } 
+ };

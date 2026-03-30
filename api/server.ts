@@ -9,28 +9,35 @@ app.post('/api/send-otp', sendOtp);
 /**
  * start server with port
  */
-const PORT = process.env.PORT || 3004;
+import portfinder from 'portfinder';
 
-const server = app.listen(PORT, () => {
-  console.log(`Server ready on port ${PORT}`);
-});
-
-/**
- * close server
- */
-process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+portfinder.getPort((err, port) => {
+  if (err) {
+    console.error(err);
+    return;
+  }
+  
+  const server = app.listen(port, () => {
+    console.log(`Server ready on port ${port}`);
   });
-});
 
-process.on('SIGINT', () => {
-  console.log('SIGINT signal received');
-  server.close(() => {
-    console.log('Server closed');
-    process.exit(0);
+  /**
+   * close server
+   */
+  process.on('SIGTERM', () => {
+    console.log('SIGTERM signal received');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
+  });
+
+  process.on('SIGINT', () => {
+    console.log('SIGINT signal received');
+    server.close(() => {
+      console.log('Server closed');
+      process.exit(0);
+    });
   });
 });
 

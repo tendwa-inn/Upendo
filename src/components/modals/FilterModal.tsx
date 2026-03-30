@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { X } from 'lucide-react';
+import { X, Lock } from 'lucide-react';
+import { useAuthStore } from '../../stores/authStore';
 
 interface FilterModalProps {
   isOpen: boolean;
@@ -13,14 +14,17 @@ const africanTribes = [
 ].sort();
 
 const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApply }) => {
+  const { user } = useAuthStore();
   const [ageRange, setAgeRange] = useState([18, 60]);
   const [distance, setDistance] = useState(50);
   const [tribe, setTribe] = useState('');
 
+  const isVip = user?.subscription_tier === 'vip';
+
   if (!isOpen) return null;
 
   const handleApply = () => {
-    onApply({ ageRange, distance, tribe });
+    onApply({ ageRange, distance, tribe: isVip ? tribe : '' });
     onClose();
   };
 
@@ -55,11 +59,20 @@ const FilterModal: React.FC<FilterModalProps> = ({ isOpen, onClose, onApply }) =
             <input type="range" min="1" max="100" value={distance} onChange={(e) => setDistance(parseInt(e.target.value))} className="w-full" />
           </div>
           <div>
-            <label className="block text-sm font-semibold mb-2 text-gray-300">Tribe</label>
-            <select value={tribe} onChange={(e) => setTribe(e.target.value)} className="w-full p-3 bg-white/5 rounded-md border border-white/10">
-              <option value="">All Tribes</option>
-              {africanTribes.map(t => <option key={t} value={t} className="bg-gray-800 text-white">{t}</option>)}
-            </select>
+            <label className="block text-sm font-semibold mb-2 text-gray-300 flex items-center">
+              Tribe
+              {!isVip && <Lock className="w-3 h-3 ml-2 text-yellow-400" />}
+            </label>
+            {isVip ? (
+              <select value={tribe} onChange={(e) => setTribe(e.target.value)} className="w-full p-3 bg-white/5 rounded-md border border-white/10">
+                <option value="">All Tribes</option>
+                {africanTribes.map(t => <option key={t} value={t} className="bg-gray-800 text-white">{t}</option>)}
+              </select>
+            ) : (
+              <div className="w-full p-3 bg-white/5 rounded-md border border-white/10 text-gray-500 cursor-not-allowed">
+                VIP Feature
+              </div>
+            )}
           </div>
         </div>
 

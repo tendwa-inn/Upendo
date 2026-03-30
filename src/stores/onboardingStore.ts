@@ -11,7 +11,16 @@ interface OnboardingState {
 
 export const useOnboardingStore = create<OnboardingState>((set) => ({
   step: 1,
-  formData: {},
+  formData: {
+    name: '',
+    dob: '',
+    gender: '',
+    interested_in: '',
+    relationship_intent: '',
+    interests: [],
+    kids: '',
+    location: null,
+  },
   nextStep: () => set((state) => {
     console.log(`[ZUSTAND_nextStep] Current step: ${state.step}. Incrementing...`);
     const nextStep = state.step + 1;

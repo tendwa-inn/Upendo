@@ -12,22 +12,24 @@ const SafeImage: React.FC<SafeImageProps> = ({
   src, 
   alt, 
   className = '', 
-  fallbackSrc = '/upendo-logo.png',
+  fallbackSrc,
   onError 
 }) => {
   const [imageSrc, setImageSrc] = useState(src);
   const [hasError, setHasError] = useState(false);
 
   const handleError = () => {
-    if (!hasError && imageSrc !== fallbackSrc) {
-      setImageSrc(fallbackSrc);
+    if (!hasError) {
+      if (fallbackSrc && imageSrc !== fallbackSrc) {
+        setImageSrc(fallbackSrc);
+      }
       setHasError(true);
       onError?.();
     }
   };
 
   // If the source is already the fallback, don't try to load the original
-  const finalSrc = hasError ? fallbackSrc : imageSrc;
+  const finalSrc = hasError ? (fallbackSrc || '') : imageSrc;
 
   return (
     <img

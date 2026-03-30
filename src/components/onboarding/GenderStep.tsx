@@ -6,8 +6,8 @@ const GenderStep: React.FC = () => {
   const { nextStep, prevStep, updateFormData } = useOnboardingStore();
 
   const handleSelect = (gender: string) => {
-    const looking_for = gender === 'male' ? 'female' : 'male';
-    updateFormData({ gender, looking_for });
+    const interested_in = gender === 'male' ? 'female' : 'male';
+    updateFormData({ gender, interested_in });
     nextStep();
   };
 

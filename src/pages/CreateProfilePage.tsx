@@ -6,7 +6,9 @@ import DobStep from '../components/onboarding/DobStep';
 import GenderStep from '../components/onboarding/GenderStep';
 import TribeStep from '../components/onboarding/TribeStep';
 import InterestsStep from '../components/onboarding/InterestsStep';
+import LookingForStep from '../components/onboarding/LookingForStep';
 import LocationStep from '../components/onboarding/LocationStep';
+import KidsStep from '../components/onboarding/KidsStep';
 
 import { IoArrowBack } from 'react-icons/io5';
 import { useNavigate } from 'react-router-dom';
@@ -32,10 +34,14 @@ const CreateProfilePage: React.FC = () => {
       case 3:
         return <GenderStep />;
       case 4:
-        return <TribeStep />;
+        return <LookingForStep />;
       case 5:
-        return <InterestsStep />;
+        return <KidsStep />;
       case 6:
+        return <TribeStep />;
+      case 7:
+        return <InterestsStep />;
+      case 8:
         return <LocationStep />;
       default:
         return <NameStep />;

@@ -1,77 +1,111 @@
 import React from 'react';
 import { Notification } from '../../types';
-import { useAuthStore } from '../../stores/authStore';
+import { useNotificationStore } from '../../stores/notificationStore';
+import { useNavigate } from 'react-router-dom';
 import { Link } from 'react-router-dom';
-import { User, MessageCircle, Eye, ShieldCheck, Sparkles, AlertTriangle } from 'lucide-react';
-import SafeImage from '../common/SafeImage';
+import { useAuthStore } from '../../stores/authStore';
+import upendoLogo from '/upendo-logo.png'; // Import the logo
+import logoSplash from '../../../Splashscreen/Logo Splash.png';
 
 interface NotificationItemProps {
   notification: Notification;
+  onClick?: () => void;
 }
 
-const NotificationIcon: React.FC<{ type: Notification['type'] }> = ({ type }) => {
-  switch (type) {
-    case 'profile-view': return <Eye className="w-5 h-5 text-blue-400" />;
-    case 'new-like': return <User className="w-5 h-5 text-pink-400" />;
-    case 'new-message': return <MessageCircle className="w-5 h-5 text-green-400" />;
-    case 'report-feedback': return <ShieldCheck className="w-5 h-5 text-gray-400" />;
-    case 'swipe-refresh': return <Sparkles className="w-5 h-5 text-yellow-400" />;
-    case 'account-issue': return <AlertTriangle className="w-5 h-5 text-red-400" />;
-    default: return null;
+const NotificationItem: React.FC<NotificationItemProps> = ({ notification, onClick }) => {
+  if (!notification || !notification.message) {
+    return null;
   }
-};
+  const { user: currentUser, profile } = useAuthStore();
 
-const NotificationItem: React.FC<NotificationItemProps> = ({ notification }) => {
-  const { user } = useAuthStore();
-  const isFreeTier = user?.subscription === 'free';
-  const isPremiumAction = notification.type === 'profile-view' || notification.type === 'new-like';
-  const shouldBlur = isFreeTier && isPremiumAction;
+  const { markAsRead } = useNotificationStore();
+  const navigate = useNavigate();
 
-  let message = notification.message;
-  if (shouldBlur) {
-    if (notification.type === 'profile-view') {
-      message = 'Someone viewed your profile';
-    } else if (notification.type === 'new-like') {
-      message = 'Someone liked your profile';
+  const handleNotificationClick = () => {
+    if (!notification.is_read) {
+      markAsRead(notification.id);
     }
-  }
 
-  const content = (
-    <div className={`flex items-start space-x-4 p-4 ${!notification.isRead ? 'bg-white/5' : ''}`}>
-      <div className="relative">
-        {notification.relatedUser ? (
-          <div className="w-10 h-10 rounded-full overflow-hidden">
-            <SafeImage 
-              src={notification.relatedUser.photos[0]} 
-              alt={shouldBlur ? 'A potential match' : notification.relatedUser.name} 
-              className={`w-full h-full object-cover ${shouldBlur ? 'blur-sm' : ''}`} 
-            />
-          </div>
-        ) : (
-          <div className="w-10 h-10 rounded-full bg-gray-700 flex items-center justify-center">
-            <NotificationIcon type={notification.type} />
-          </div>
-        )}
+    // Navigate based on notification type
+    switch (notification.type) {
+      case 'profile_view':
+      case 'new_like':
+        if (notification.actor?.id) {
+          navigate(`/user/${notification.actor.id}`);
+        }
+        break;
+      case 'new_message':
+        if (notification.actor?.id) {
+          navigate(`/chat/${notification.actor.id}`);
+        }
+        break;
+      // For system messages or promos, you might want to navigate to a specific screen
+      // or do nothing. For now, we do nothing.
+      case 'system_message':
+      case 'promo_redemption':
+      default:
+        break;
+    }
+
+    onClick?.();
+  };
+
+  // Correctly check for premium status using account_type
+  const isPremium = profile?.account_type === 'pro' || profile?.account_type === 'vip';
+
+  const renderContent = () => {
+    // Use the new isPremium flag
+    switch (notification.type) {
+      case 'profile_view':
+        if (isPremium) {
+          return <p><span className="font-bold">{notification.actor.name}</span> viewed your profile.</p>;
+        } else {
+          return <button onClick={(e) => { e.preventDefault(); /* Open upgrade modal */ }} className="text-pink-400 hover:underline">Someone viewed your profile. Upgrade to see who!</button>;
+        }
+      case 'new_like':
+        if (isPremium) {
+          return <p><span className="font-bold">{notification.actor.name}</span> liked your profile!</p>;
+        } else {
+          return <button onClick={(e) => { e.preventDefault(); /* Open upgrade modal */ }} className="text-pink-400 hover:underline">Someone liked you! Upgrade to see who!</button>;
+        }
+      case 'system_message':
+        return notification.message;
+      case 'promo_redemption':
+        return notification.message; // Display the message from the DB
+      default:
+        return notification.message || 'New notification';
+    }
+  };
+
+  const link = notification.type === 'profile_view' || notification.type === 'new_like' ? `/user/${notification.actor?.id}` : '#';
+
+  const imageSrc = notification.type === 'promo_redemption' || notification.type === 'system_message' 
+    ? upendoLogo 
+    : notification.actor?.photos?.[0] || 'https://placehold.co/150';
+
+  const imageAlt = notification.type === 'promo_redemption' || notification.type === 'system_message'
+    ? 'Upendo Logo'
+    : notification.actor?.name || 'User';
+
+  return (
+    <div onClick={handleNotificationClick} className={`block p-4 border-b border-white/10 ${!notification.is_read ? 'bg-white/10' : 'bg-transparent'} hover:bg-white/20 transition-colors duration-200 cursor-pointer`}>
+      <div className="flex items-center">
+        <div className="flex-shrink-0 mr-4">
+          <img 
+            className={`w-10 h-10 rounded-full object-cover ${(!isPremium && (notification.type === 'profile_view' || notification.type === 'new_like')) ? 'filter blur-sm' : ''}`}
+            src={imageSrc} 
+            alt={imageAlt} 
+          />
+        </div>
+        <div className="flex-1 text-white">
+          <div className="text-sm">{renderContent()}</div>
+          <span className="text-xs text-white/50 mt-1">
+            {new Date(notification.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+        </div>
       </div>
-      <div className="flex-1">
-        <p className="text-sm">
-          {message}
-        </p>
-        <span className="text-xs text-gray-400 mt-1">
-          {new Date(notification.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
-      </div>
-      {shouldBlur && (
-        <button className="text-xs bg-pink-500 text-white px-2 py-1 rounded-full font-semibold">
-          Unlock
-        </button>
-      )}
     </div>
   );
-
-  const link = shouldBlur ? '/premium' : notification.link;
-
-  return link ? <Link to={link}>{content}</Link> : content;
 };
 
 export default NotificationItem;

@@ -24,10 +24,12 @@ export default defineConfig({
     }), 
     tsconfigPaths(),
   ],
+  envDir: './',
+  envPrefix: 'VITE_',
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: 'http://localhost:8003',
         changeOrigin: true,
         secure: false,
         configure: (proxy, _options) => {

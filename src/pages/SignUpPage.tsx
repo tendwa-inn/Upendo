@@ -1,20 +1,32 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/authStore';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const SignUpPage: React.FC = () => {
-  const { isLoading, signInWithGoogle } = useAuthStore();
+  const { isLoading, signInWithGoogle, signUpWithEmail } = useAuthStore();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
   const handleGoogleSignUp = async () => {
     try {
       await signInWithGoogle();
-      // On successful sign-in, Supabase will redirect.
-      // If the user is new, you might want to redirect them to a profile setup page.
-      // This logic can be handled in the component that listens to auth state changes (e.g., App.tsx).
     } catch (error) {
       console.error('Google Sign-Up Error:', error);
       alert('Failed to sign up with Google. Please try again.');
+    }
+  };
+
+  const handleEmailSignUp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await signUpWithEmail(email, password);
+      // The checkUser call inside signUpWithEmail will trigger the RouteGuard
+      // which will then navigate to /onboarding for new users.
+    } catch (error) {
+      console.error('Email Sign-Up Error:', error);
+      // The error toast is already handled in the store
     }
   };
 
@@ -31,25 +43,46 @@ const SignUpPage: React.FC = () => {
           <p className="text-white/80 mt-2">Join Upendo today to find your match.</p>
         </div>
 
-        {isLoading ? (
-          <div className="flex justify-center items-center py-3">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-          </div>
-        ) : (
+        <form onSubmit={handleEmailSignUp} className="space-y-4">
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full p-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-white"
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full p-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-400 text-white"
+            required
+          />
           <button 
-            onClick={handleGoogleSignUp}
-            className="w-full flex items-center justify-center gap-3 bg-white/20 text-white font-bold py-3 rounded-xl transition-all duration-300 hover:bg-white/30 active:scale-95"
+            type="submit"
+            disabled={isLoading}
+            className="w-full bg-pink-600 text-white font-bold py-3 rounded-xl transition-all duration-300 hover:bg-pink-700 active:scale-95 disabled:bg-pink-800"
           >
-            <img src="/google-logo.svg" alt="Google" className="w-6 h-6" />
-            Sign up with Google
+            {isLoading ? 'Signing up...' : 'Create Account'}
           </button>
-        )}
+        </form>
 
         <div className="flex items-center justify-center space-x-2">
           <div className="flex-grow h-px bg-white/20"></div>
           <span className="text-white/60 text-sm">OR</span>
           <div className="flex-grow h-px bg-white/20"></div>
         </div>
+
+        <button 
+          onClick={handleGoogleSignUp}
+          disabled={isLoading}
+          className="w-full flex items-center justify-center gap-3 bg-white/20 text-white font-bold py-3 rounded-xl transition-all duration-300 hover:bg-white/30 active:scale-95 disabled:opacity-50"
+        >
+          <img src="/google-logo.svg" alt="Google" className="w-6 h-6" />
+          Sign up with Google
+        </button>
 
         <div className="text-center">
           <p className="text-white/60">

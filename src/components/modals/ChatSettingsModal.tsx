@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Lock } from 'lucide-react';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAuthStore } from '../../stores/authStore';
+import { supabase } from '../../lib/supabaseClient';
 
 interface ChatSettingsModalProps {
   isOpen: boolean;
@@ -10,10 +11,18 @@ interface ChatSettingsModalProps {
 }
 
 const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuthStore();
+  const { user, profile, updateUserProfile } = useAuthStore();
   const { isAutoUnmatchEnabled, toggleAutoUnmatch } = useSettingsStore();
+  const [isGhostMode, setGhostMode] = React.useState(profile?.ghost_mode_enabled || false);
 
-  const isPremium = user?.subscription === 'pro' || user?.subscription === 'vip';
+  const toggleGhostMode = async () => {
+    if (!user) return;
+    const newStatus = !isGhostMode;
+    setGhostMode(newStatus);
+    await updateUserProfile({ ghost_mode_enabled: newStatus });
+  };
+
+  const isPremium = profile?.account_type === 'pro' || profile?.account_type === 'vip';
 
   return (
     <AnimatePresence>
@@ -30,7 +39,7 @@ const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose }
             animate={{ y: 0 }}
             exit={{ y: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="bg-stone-800 rounded-t-2xl w-full max-w-md h-auto absolute bottom-0 text-white"
+            className="bg-stone-800 rounded-t-2xl w-full max-w-md h-auto absolute bottom-0 mb-20 text-white"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="p-4 border-b border-white/10 flex items-center justify-between">
@@ -60,7 +69,7 @@ const ChatSettingsModal: React.FC<ChatSettingsModalProps> = ({ isOpen, onClose }
                     <p className="text-sm text-gray-400">Hide your active status.</p>
                   </div>
                   <label className="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" disabled={!isPremium} className="sr-only peer" />
+                    <input type="checkbox" disabled={!isPremium} checked={isGhostMode} onChange={toggleGhostMode} className="sr-only peer" />
                     <div className="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-4 peer-focus:ring-pink-500/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-pink-500"></div>
                   </label>
                 </div>
